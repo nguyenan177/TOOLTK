@@ -431,11 +431,45 @@
       await showPicker(async (account) => {
         lastSelectedAccount = account;
         btn.textContent = "⌨️..."; btn.disabled = true;
+
+        // 1. Điền Tên
         await typeIntoInput(getNameInput(), account.name);
+
+        // 2. Điền STK (nếu có)
         const tStk = getStkInput();
         if (tStk) { await sleep(200); await typeIntoInput(tStk, account.account); }
+
+        // 3. Tự động Điền SĐT
+        await sleep(400);
+        const { [API_KEY_STORE]:apiKey, [CURRENT_SIM_KEY]:currentRaw } = await getStorage([API_KEY_STORE, CURRENT_SIM_KEY]);
+        const type = detectType(apiKey);
+        if (apiKey && type) {
+          const phoneEl = findPhoneInput();
+          if (phoneEl) {
+            let currentSim = null;
+            try { currentSim = JSON.parse(currentRaw || "null"); } catch(e) {}
+            const isVerifyStep = /\d+\*\d+/.test(phoneEl.placeholder || "");
+            if (isVerifyStep && currentSim?.phone) {
+              doFillPhone(currentSim.phone);
+            } else if (!isVerifyStep) {
+              if (phoneEl.value) fillInput(phoneEl, "");
+              if (currentSim) await cancelSim(currentSim, apiKey);
+              const res = await rentNewSim(apiKey, type);
+              if (res) {
+                setStorage({[CURRENT_SIM_KEY]: JSON.stringify(res.simObj)});
+                doFillPhone(res.phone);
+              }
+            }
+          }
+        }
+
+        // 4. Tự động Điền MK
+        await sleep(500);
+        const pwEl = getPasswordInput();
+        if (pwEl) await typeIntoInput(pwEl, PASSWORD);
+
         btn.textContent = "✅ Xong"; btn.style.background = "#2e7d32";
-        setTimeout(() => { btn.innerHTML = "👤 Điền Tên"; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
+        setTimeout(() => { btn.innerHTML = "👤 Điền Tên"; btn.style.background = "#f60"; btn.disabled = false; }, 2000);
       });
     });
 
