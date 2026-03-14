@@ -1,7 +1,10 @@
 (function () {
-  // Tránh chạy 2 lần
   if (window.__MK_LOADED__) return;
   window.__MK_LOADED__ = true;
+
+  // =====================================================
+  // ========== PHẦN 1: BANK TOOL (Firebase) ==========
+  // =====================================================
 
   const PASSWORD = "Minhanhs1";
 
@@ -10,12 +13,9 @@
     projectId: "project-firebase-49d8c"
   };
 
-  // ========== TỪ KHOÁ FIELD ==========
   const FIELD_KEYWORDS = {
     password: ["mật khẩu", "password", "mat khau", "pass"],
     name:     ["họ và tên", "ho va ten", "họ tên", "full name", "tên thật", "ten that", "tên người", "họ tên thật"],
-    phone:    ["số điện thoại", "so dien thoai", "sdt", "phone", "mobile", "điện thoại"],
-    username: ["tên tài khoản", "username", "tài khoản", "tai khoan", "đăng nhập", "login"],
     stk:      ["số tài khoản", "so tai khoan", "stk", "account number", "tài khoản ngân hàng", "bank account", "số tk"]
   };
 
@@ -49,7 +49,6 @@
   function getNameInput() { return findInputByKeywords(FIELD_KEYWORDS.name); }
   function getStkInput()  { return findInputByKeywords(FIELD_KEYWORDS.stk);  }
 
-  // ========== UTILITIES ==========
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
@@ -104,7 +103,6 @@
     return true;
   }
 
-  // ========== FIREBASE ==========
   async function fetchAccounts() {
     const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/accounts?key=${FIREBASE_CONFIG.apiKey}&pageSize=100`;
     try {
@@ -115,12 +113,10 @@
         const f = doc.fields || {};
         return { name: f.name?.stringValue || "", account: f.account?.stringValue || "", tag: f.tag?.stringValue || "" };
       }).filter(a => a.name);
-    } catch (e) { console.log("[MK] fetch error", e); return []; }
+    } catch (e) { return []; }
   }
 
-  // ========== PICKER ==========
   let pickerOpen = false;
-
   async function showPicker(onSelect) {
     if (pickerOpen) return;
     pickerOpen = true;
@@ -142,7 +138,6 @@
         <div style="text-align:center;padding:20px;color:#aaa;font-size:13px;">⏳ Đang tải...</div>
       </div>
     `;
-
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
@@ -154,10 +149,7 @@
 
     function renderList(list) {
       const listEl = box.querySelector("#__pk_list__");
-      if (!list.length) {
-        listEl.innerHTML = `<div style="text-align:center;padding:20px;color:#aaa;font-size:13px;">Không có kết quả</div>`;
-        return;
-      }
+      if (!list.length) { listEl.innerHTML = `<div style="text-align:center;padding:20px;color:#aaa;font-size:13px;">Không có kết quả</div>`; return; }
       listEl.innerHTML = "";
       list.forEach(a => {
         const row = document.createElement("div");
@@ -185,11 +177,206 @@
     });
   }
 
-  // ========== MEMORY ==========
   let lastSelectedAccount = null;
 
+  // =====================================================
+  // ========== PHẦN 2: SIM / OTP TOOL ==========
+  // =====================================================
+
+  const SIM_KEY         = "okvip_sims";
+  const CURRENT_SIM_KEY = "okvip_current_sim";
+  const API_KEY_STORE   = "okvip_api_key";
+  const DEFAULT_API_KEY = "ed7192f2d8bd0a6ee3b60a1915cc0084";
+  const WORKER          = "https://api.dblgamingg.workers.dev";
+  const SV2_BASE        = "https://noisy-darkness-b3aa.dblgamingg.workers.dev/api";
+  const FIXED_SVC       = 49;
+  const APP_ID          = 1200;
+
+  if (!localStorage.getItem(API_KEY_STORE)) {
+    localStorage.setItem(API_KEY_STORE, DEFAULT_API_KEY);
+  }
+
+  function findPhoneInput() {
+    const direct = document.querySelector('input[data-input-name="phone"]');
+    if (direct) return direct;
+    const tel = document.querySelector('input[type="tel"]');
+    if (tel) return tel;
+    const KW = /phone|mobile|sdt|sdт/i;
+    return [...document.querySelectorAll('input[type="text"],input[type="number"]')]
+      .find(el =>
+        KW.test(el.placeholder||"") || KW.test(el.name||"") ||
+        KW.test(el.id||"") || KW.test(el.getAttribute("data-input-name")||"") ||
+        KW.test(el.getAttribute("aria-label")||"")
+      ) || null;
+  }
+
+  function findOtpInput() {
+    const KW = /otp|m[aã].? ?x[aá]c|verif|code|captcha|sms/i;
+    return [...document.querySelectorAll('input[type="text"],input[type="number"],input[type="tel"]')]
+      .find(el =>
+        KW.test(el.placeholder||"") || KW.test(el.name||"") ||
+        KW.test(el.id||"") || KW.test(el.getAttribute("data-input-name")||"") ||
+        KW.test(el.getAttribute("aria-label")||"")
+      ) || null;
+  }
+
+  const stripZero = p => p.startsWith("0") ? p.slice(1) : p;
+
+  function fillInput(el, val) {
+    if (!el) return false;
+    el.focus(); el.select();
+    try {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (setter) setter.call(el, val); else el.value = val;
+    } catch(e) { el.value = val; }
+    ['focus','input','change','blur'].forEach(ev =>
+      el.dispatchEvent(new Event(ev, { bubbles: true, cancelable: true }))
+    );
+    el.dispatchEvent(new KeyboardEvent('keydown',  { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new KeyboardEvent('keypress', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new KeyboardEvent('keyup',    { bubbles: true, cancelable: true }));
+    return true;
+  }
+
+  const getStorage = keys => Promise.resolve(Object.fromEntries(keys.map(k => [k, localStorage.getItem(k)])));
+  const setStorage = obj => { Object.entries(obj).forEach(([k,v]) => localStorage.setItem(k, v)); return Promise.resolve(); };
+
+  function detectType(key) {
+    if (!key) return null;
+    if (key.startsWith("eyJ") && key.split(".").length === 3) return "okvip";
+    if (/^[a-f0-9]{32}$/i.test(key)) return "sv2";
+    return null;
+  }
+
+  async function callOkvip(path) { return (await fetch(WORKER + path)).json(); }
+  async function callSv2(apiKey, params) { return (await fetch(SV2_BASE + "?" + new URLSearchParams({apik: apiKey, ...params}))).json(); }
+
+  async function cancelSim(sim, apiKey) {
+    try {
+      if (sim.source === "okvip") await callOkvip(`/cancel?api_key=${apiKey}&sim_id=${sim.simId}`);
+      else await callSv2(apiKey, {act:"expired", id:sim.otpId});
+    } catch(e) {}
+  }
+
+  async function rentNewSim(apiKey, type) {
+    showToast("⏳ Đang thuê SIM...", "info");
+    for (let i = 0; i < 3; i++) {
+      try {
+        if (type === "okvip") {
+          const d = await callOkvip(`/get-sim?api_key=${apiKey}&service_id=${FIXED_SVC}`);
+          if (d?.status !== 200) continue;
+          return { phone: d.data.phone, simObj: { source:"okvip", otpId:d.data.otpId, simId:d.data.simId, phone:d.data.phone, code:null, done:false } };
+        } else {
+          const d = await callSv2(apiKey, {act:"number", appId:APP_ID});
+          if (d?.ResponseCode !== 0) continue;
+          const phone = "0" + d.Result.Number;
+          return { phone, simObj: { source:"sv2", otpId:d.Result.Id, simId:d.Result.Id, phone, code:null, done:false } };
+        }
+      } catch(e) {}
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    showToast("❌ Kho số tạm hết", "error");
+    return null;
+  }
+
+  async function pollOtp(sim, apiKey, btn) {
+    const maxTry = 30; let count = 0;
+    return new Promise(resolve => {
+      const timer = setInterval(async () => {
+        count++;
+        if (count > maxTry) {
+          clearInterval(timer);
+          btn.textContent = "⏰ Hết giờ"; btn.style.background = "#dc3545";
+          resolve(null); return;
+        }
+        try {
+          let code = null;
+          if (sim.source === "okvip") {
+            const d = await callOkvip(`/get-otp?api_key=${apiKey}&otp_id=${sim.otpId}`);
+            const m = (d?.data?.content||"").match(/\b\d{4,8}\b/);
+            if (m) code = m[0];
+          } else {
+            const d = await callSv2(apiKey, {act:"code", id:sim.otpId});
+            if (d?.ResponseCode === 0 && d?.Result?.Code) code = d.Result.Code;
+          }
+          if (code) {
+            clearInterval(timer);
+            btn.textContent = `✅ OTP ${code}`; btn.style.background = "#28a745";
+            fillInput(findOtpInput(), code);
+            sim.code = code; sim.done = true;
+            setStorage({[CURRENT_SIM_KEY]: JSON.stringify(sim)});
+            resolve(code);
+          }
+        } catch(e) {}
+      }, 4000);
+    });
+  }
+
+  function doFillPhone(phone) {
+    const phoneEl = findPhoneInput();
+    setTimeout(() => {
+      fillInput(phoneEl, stripZero(phone));
+      setTimeout(() => { if (!phoneEl?.value) fillInput(phoneEl, phone); }, 500);
+    }, 300);
+  }
+
+  async function handleFillPhoneClick() {
+    const { [API_KEY_STORE]:apiKey, [CURRENT_SIM_KEY]:currentRaw } = await getStorage([API_KEY_STORE, CURRENT_SIM_KEY]);
+    const type = detectType(apiKey);
+    if (!apiKey || !type) { showToast("❌ API key lỗi", "error"); return; }
+
+    let currentSim = null;
+    try { currentSim = JSON.parse(currentRaw || "null"); } catch(e) {}
+
+    const phoneEl     = findPhoneInput();
+    const isVerifyStep = /\d+\*\d+/.test(phoneEl?.placeholder || "");
+
+    if (isVerifyStep) {
+      if (currentSim?.phone) { showToast(`♻️ Dùng lại ${currentSim.phone}`, "info"); doFillPhone(currentSim.phone); }
+      else showToast("❌ Chưa có SIM", "error");
+      return;
+    }
+
+    if (phoneEl?.value) fillInput(phoneEl, "");
+    if (currentSim) await cancelSim(currentSim, apiKey);
+
+    const res = await rentNewSim(apiKey, type);
+    if (!res) return;
+    setStorage({[CURRENT_SIM_KEY]: JSON.stringify(res.simObj)});
+    showToast(`✅ ${res.phone}`, "success");
+    doFillPhone(res.phone);
+  }
+
+  async function handleOtpClick() {
+    const { [CURRENT_SIM_KEY]:raw, [API_KEY_STORE]:apiKey } = await getStorage([CURRENT_SIM_KEY, API_KEY_STORE]);
+    let sim = null;
+    try { sim = JSON.parse(raw || "null"); } catch(e) {}
+    if (!sim) { showToast("❌ Chưa có SIM", "error"); return; }
+    const btn = document.getElementById("okvip-btn-otp");
+    btn.textContent = "⏳ Đang chờ"; btn.style.background = "#6c757d";
+    await pollOtp(sim, apiKey, btn);
+  }
+
+  // =====================================================
+  // ========== TOAST CHUNG ==========
+  // =====================================================
+
+  function showToast(msg, type) {
+    document.getElementById("mk-toast-global")?.remove();
+    const colors = { success:"#28a745", error:"#dc3545", info:"#007bff" };
+    const t = document.createElement("div");
+    t.id = "mk-toast-global";
+    t.textContent = msg;
+    t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:bold;color:#fff;background:${colors[type]||"#333"};pointer-events:none;font-family:-apple-system,Arial,sans-serif;`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+  }
+
+  // =====================================================
   // ========== INJECT BUTTONS ==========
-  function injectBtn(inputFn, btnId, wrapperId, label, onClick) {
+  // =====================================================
+
+  function injectBankBtn(inputFn, btnId, wrapperId, label, color, onClick) {
     if (document.getElementById(btnId)) return;
     const input = inputFn();
     if (!input) return;
@@ -203,22 +390,36 @@
     input.style.paddingRight = "110px";
 
     const btn = document.createElement("button");
-    btn.id = btnId;
-    btn.type = "button";
-    btn.innerHTML = label;
+    btn.id = btnId; btn.type = "button"; btn.innerHTML = label;
     Object.assign(btn.style, {
-      position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)",
-      background: "#f60", color: "#fff", border: "none", borderRadius: "6px",
-      padding: "6px 10px", cursor: "pointer", fontWeight: "700", fontSize: "12px",
-      zIndex: "9999", whiteSpace: "nowrap", touchAction: "manipulation"
+      position:"absolute", right:"4px", top:"50%", transform:"translateY(-50%)",
+      background: color || "#f60", color:"#fff", border:"none", borderRadius:"6px",
+      padding:"6px 10px", cursor:"pointer", fontWeight:"700", fontSize:"12px",
+      zIndex:"9999", whiteSpace:"nowrap", touchAction:"manipulation"
     });
     btn.addEventListener("mousedown", e => e.preventDefault());
     btn.addEventListener("click", () => onClick(btn));
     w.appendChild(btn);
   }
 
+  function injectSimBtn(inputEl, id, label, color, handler) {
+    if (document.getElementById(id)) return;
+    const parent = inputEl.parentElement;
+    if (getComputedStyle(parent).position === "static") parent.style.position = "relative";
+    const btn = document.createElement("button");
+    btn.id = id; btn.type = "button"; btn.textContent = label;
+    btn.style.cssText = `position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:9999;padding:4px 10px;background:${color};color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:bold;cursor:pointer;touch-action:manipulation;`;
+    btn.onclick = handler;
+    parent.appendChild(btn);
+  }
+
+  // =====================================================
+  // ========== MAIN INJECT LOOP ==========
+  // =====================================================
+
   function tryInjectAll() {
-    injectBtn(getPasswordInput, "__mk_fill_btn__", "__mk_wrapper__", "🔑 Điền MK", async (btn) => {
+    // --- BANK BUTTONS ---
+    injectBankBtn(getPasswordInput, "__mk_fill_btn__", "__mk_wrapper__", "🔑 Điền MK", "#f60", async (btn) => {
       const t = getPasswordInput();
       btn.textContent = "⌨️..."; btn.disabled = true;
       await typeIntoInput(t, PASSWORD);
@@ -226,7 +427,7 @@
       setTimeout(() => { btn.innerHTML = "🔑 Điền MK"; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
     });
 
-    injectBtn(getNameInput, "__mk_name_btn__", "__mk_name_wrapper__", "👤 Điền Tên", async (btn) => {
+    injectBankBtn(getNameInput, "__mk_name_btn__", "__mk_name_wrapper__", "👤 Điền Tên", "#f60", async (btn) => {
       await showPicker(async (account) => {
         lastSelectedAccount = account;
         btn.textContent = "⌨️..."; btn.disabled = true;
@@ -238,7 +439,7 @@
       });
     });
 
-    injectBtn(getStkInput, "__mk_stk_btn__", "__mk_stk_wrapper__", "💳 Điền STK", async (btn) => {
+    injectBankBtn(getStkInput, "__mk_stk_btn__", "__mk_stk_wrapper__", "💳 Điền STK", "#f60", async (btn) => {
       if (!lastSelectedAccount) {
         await showPicker(async (account) => {
           lastSelectedAccount = account;
@@ -254,20 +455,37 @@
         setTimeout(() => { btn.innerHTML = "💳 Điền STK"; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
       }
     });
+
+    // --- SIM / OTP BUTTONS ---
+    const phone = findPhoneInput();
+    if (phone) {
+      injectSimBtn(phone, "okvip-btn-phone", "📲 Điền SĐT", "#ff6b00", handleFillPhoneClick);
+
+      const isVerifyStep = /\d+\*\d+/.test(phone.placeholder || "");
+      if (!phone.value && isVerifyStep) {
+        try {
+          const sim = JSON.parse(localStorage.getItem(CURRENT_SIM_KEY) || "null");
+          if (sim?.phone) {
+            setTimeout(() => {
+              if (!phone.value) {
+                fillInput(phone, stripZero(sim.phone));
+                setTimeout(() => { if (!phone.value) fillInput(phone, sim.phone); }, 500);
+              }
+            }, 400);
+          }
+        } catch(e) {}
+      }
+    }
+
+    const otp = findOtpInput();
+    if (otp) injectSimBtn(otp, "okvip-btn-otp", "📨 Lấy OTP", "#28a745", handleOtpClick);
   }
 
   tryInjectAll();
-  const observer = new MutationObserver(() => tryInjectAll());
-  observer.observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(tryInjectAll).observe(document.body, { childList: true, subtree: true });
   setInterval(tryInjectAll, 1000);
 
-  // ========== TOAST THÔNG BÁO ==========
-  const toast = document.createElement("div");
-  toast.style.cssText = "position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;z-index:2147483647;opacity:0;transition:opacity 0.3s;pointer-events:none;font-family:-apple-system,Arial,sans-serif;";
-  toast.textContent = "✅ MK Bank đã sẵn sàng!";
-  document.body.appendChild(toast);
-  setTimeout(() => { toast.style.opacity = "1"; }, 100);
-  setTimeout(() => { toast.style.opacity = "0"; }, 2500);
-  setTimeout(() => { toast.remove(); }, 3000);
+  // Toast khởi động
+  showToast("✅ Tool đã sẵn sàng!", "success");
 
 })();
