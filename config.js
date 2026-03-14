@@ -80,25 +80,22 @@
   }
 
   async function showNickPicker(fullName, onSelect) {
-    const options = genNickOptions(fullName);
+    let currentOptions = genNickOptions(fullName);
 
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;";
 
     const box = document.createElement("div");
-    box.style.cssText = "background:#fff;border-radius:12px;width:90vw;max-width:360px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;font-family:-apple-system,Arial,sans-serif;";
+    box.style.cssText = "background:#fff;border-radius:12px;width:90vw;max-width:380px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;font-family:-apple-system,Arial,sans-serif;";
     box.innerHTML = `
       <div style="padding:12px 16px;background:#1a73e8;color:#fff;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;">
-        🆔 Chọn kiểu Username
+        🆔 Chọn Username
         <button id="__nk_close__" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;">✕</button>
       </div>
       <div style="padding:6px 12px;background:#e8f0fe;font-size:12px;color:#1a73e8;font-weight:600;">
-        👤 Tên: <b>${fullName}</b>
+        👤 <b>${fullName}</b>
       </div>
-      <div id="__nk_list__" style="overflow-y:auto;flex:1;padding:6px 0;-webkit-overflow-scrolling:touch;"></div>
-      <div style="padding:8px 12px;border-top:1px solid #eee;display:flex;gap:6px;">
-        <button id="__nk_regen__" style="flex:1;padding:7px;background:#f0ad4e;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🎲 Random lại</button>
-      </div>
+      <div id="__nk_list__" style="overflow-y:auto;flex:1;padding:4px 0;-webkit-overflow-scrolling:touch;"></div>
     `;
     overlay.appendChild(box);
     document.body.appendChild(overlay);
@@ -106,31 +103,46 @@
     function renderOptions(opts) {
       const listEl = box.querySelector("#__nk_list__");
       listEl.innerHTML = "";
-      opts.forEach(o => {
+      opts.forEach((o, idx) => {
         const row = document.createElement("div");
-        row.style.cssText = "padding:10px 14px;cursor:pointer;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between;align-items:center;";
+        row.style.cssText = "padding:8px 10px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;";
         row.innerHTML = `
-          <div>
-            <div style="font-weight:700;font-size:14px;color:#111;font-family:monospace;">${o.value}</div>
-            <div style="font-size:11px;color:#888;margin-top:2px;">${o.label}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:13px;color:#111;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="__nk_val_${idx}__">${o.value}</div>
+            <div style="font-size:10px;color:#999;margin-top:1px;">${o.label}</div>
           </div>
-          <span style="background:#e8f0fe;color:#1a73e8;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0;">Chọn</span>
+          <button data-idx="${idx}" class="__nk_pick__" style="padding:5px 10px;background:#1a73e8;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap;">✅ Chọn</button>
+          <button data-idx="${idx}" class="__nk_rand__" style="padding:5px 8px;background:#f0ad4e;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;flex-shrink:0;">🎲</button>
         `;
-        row.addEventListener("touchstart", () => row.style.background = "#e8f0fe", { passive: true });
-        row.addEventListener("touchend",   () => row.style.background = "", { passive: true });
-        row.addEventListener("mouseenter", () => row.style.background = "#e8f0fe");
-        row.addEventListener("mouseleave", () => row.style.background = "");
-        row.addEventListener("click", () => { onSelect(o.value); close(); });
         listEl.appendChild(row);
+      });
+
+      // Bind chọn
+      listEl.querySelectorAll(".__nk_pick__").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.dataset.idx);
+          onSelect(currentOptions[idx].value);
+          close();
+        });
+      });
+
+      // Bind random từng dòng
+      listEl.querySelectorAll(".__nk_rand__").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.dataset.idx);
+          const freshAll = genNickOptions(fullName);
+          currentOptions[idx] = freshAll[idx];
+          const valEl = listEl.querySelector(`#__nk_val_${idx}__`);
+          if (valEl) valEl.textContent = currentOptions[idx].value;
+        });
       });
     }
 
     const close = () => overlay.remove();
     overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
     box.querySelector("#__nk_close__").addEventListener("click", close);
-    box.querySelector("#__nk_regen__").addEventListener("click", () => renderOptions(genNickOptions(fullName)));
 
-    renderOptions(options);
+    renderOptions(currentOptions);
   }
 
   function findInputByKeywords(keywords, type = null) {
