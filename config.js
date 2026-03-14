@@ -605,7 +605,19 @@
           const opts = genNickOptions(lastSelectedAccount.name);
           const pick = opts[Math.floor(Math.random() * opts.length)];
           await typeIntoInput(userEl, pick.value);
-          showToast("🎲 " + pick.value, "info");
+          showToast("🎲 TK: " + pick.value, "info");
+        } else {
+          // Fallback: thử tìm theo data-input-name="account" trực tiếp
+          const fallbackEl = document.querySelector('input[data-input-name="account"]');
+          if (fallbackEl && lastSelectedAccount) {
+            const opts = genNickOptions(lastSelectedAccount.name);
+            const pick = opts[Math.floor(Math.random() * opts.length)];
+            fallbackEl.focus();
+            const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+            setter.call(fallbackEl, pick.value);
+            ['input','change'].forEach(ev => fallbackEl.dispatchEvent(new Event(ev, {bubbles:true})));
+            showToast("🎲 TK: " + pick.value, "info");
+          }
         }
 
         // 3. Tự động click Điền SĐT
