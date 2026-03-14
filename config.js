@@ -439,34 +439,33 @@
         const tStk = getStkInput();
         if (tStk) { await sleep(200); await typeIntoInput(tStk, account.account); }
 
-        // 3. Tự động Điền SĐT
-        await sleep(400);
-        const { [API_KEY_STORE]:apiKey, [CURRENT_SIM_KEY]:currentRaw } = await getStorage([API_KEY_STORE, CURRENT_SIM_KEY]);
-        const type = detectType(apiKey);
-        if (apiKey && type) {
-          const phoneEl = findPhoneInput();
-          if (phoneEl) {
-            let currentSim = null;
-            try { currentSim = JSON.parse(currentRaw || "null"); } catch(e) {}
-            const isVerifyStep = /\d+\*\d+/.test(phoneEl.placeholder || "");
-            if (isVerifyStep && currentSim?.phone) {
-              doFillPhone(currentSim.phone);
-            } else if (!isVerifyStep) {
-              if (phoneEl.value) fillInput(phoneEl, "");
-              if (currentSim) await cancelSim(currentSim, apiKey);
-              const res = await rentNewSim(apiKey, type);
-              if (res) {
-                setStorage({[CURRENT_SIM_KEY]: JSON.stringify(res.simObj)});
-                doFillPhone(res.phone);
-              }
-            }
-          }
+        // 3. Tự động Điền SĐT — click thẳng nút đã inject
+        await sleep(300);
+        const sdtBtn = document.getElementById("okvip-btn-phone");
+        if (sdtBtn) {
+          sdtBtn.click();
+          // Chờ thuê SIM xong (tối đa 15s)
+          await new Promise(resolve => {
+            let waited = 0;
+            const check = setInterval(() => {
+              waited += 500;
+              const txt = document.getElementById("okvip-btn-phone")?.textContent || "";
+              const done = txt.includes("✅") || txt.includes("❌") || txt.includes("Hết") || waited >= 15000;
+              if (done) { clearInterval(check); resolve(); }
+            }, 500);
+          });
         }
 
-        // 4. Tự động Điền MK
-        await sleep(500);
-        const pwEl = getPasswordInput();
-        if (pwEl) await typeIntoInput(pwEl, PASSWORD);
+        // 4. Tự động Điền MK — click thẳng nút đã inject
+        await sleep(400);
+        const mkBtn = document.getElementById("__mk_fill_btn__");
+        if (mkBtn) {
+          mkBtn.click();
+          await sleep(1500);
+        } else {
+          const pwEl = getPasswordInput();
+          if (pwEl) await typeIntoInput(pwEl, PASSWORD);
+        }
 
         btn.textContent = "✅ Xong"; btn.style.background = "#2e7d32";
         setTimeout(() => { btn.innerHTML = "👤 Điền Tên"; btn.style.background = "#f60"; btn.disabled = false; }, 2000);
