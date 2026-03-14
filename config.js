@@ -7,6 +7,7 @@
   // =====================================================
 
   const PASSWORD = "Minhanhs1";
+  const WITHDRAW_PASSWORD = "1";
 
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyAX7fGf0f0gj6AVcwLC6To-Zpv0tgR0UI4",
@@ -15,6 +16,7 @@
 
   const FIELD_KEYWORDS = {
     password: ["mật khẩu", "password", "mat khau", "pass"],
+    withdraw: ["mật khẩu rút tiền", "mat khau rut tien", "xác nhận mật khẩu rút", "withdraw password", "rút tiền"],
     name:     ["họ và tên", "ho va ten", "họ tên", "full name", "tên thật", "ten that", "tên người", "họ tên thật"],
     stk:      ["số tài khoản ngân hàng", "so tai khoan ngan hang", "stk", "account number", "bank account", "số tk ngân hàng", "nhập số tài khoản"],
     username: ["tên tài khoản", "ten tai khoan", "username", "tài khoản", "tai khoan", "đăng nhập", "login", "nhập tên tài khoản", "account"],
@@ -240,6 +242,13 @@
 
   function getPasswordInput() {
     return document.querySelector("input[type='password']") || findInputByKeywords(FIELD_KEYWORDS.password);
+  }
+
+  function getWithdrawInputs() {
+    // Tìm tất cả input có placeholder liên quan đến mật khẩu rút tiền
+    const KW = /mật khẩu rút|mat khau rut|withdraw.*pass|rút tiền/i;
+    return [...document.querySelectorAll('input[type="password"], input[type="text"]')]
+      .filter(el => KW.test(el.placeholder || "") || KW.test(el.getAttribute("aria-label") || ""));
   }
   function getNameInput() { return findInputByKeywords(FIELD_KEYWORDS.name); }
   function getStkInput() {
@@ -705,6 +714,37 @@
       setTimeout(() => { btn.innerHTML = "🔑 Điền MK"; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
     });
 
+    // --- MẬT KHẨU RÚT TIỀN ---
+    (function injectWithdrawPw() {
+      const wdInputs = getWithdrawInputs();
+      wdInputs.forEach((el, idx) => {
+        const btnId = `__mk_wdpw_btn_${idx}__`;
+        if (document.getElementById(btnId)) return;
+        if (el.closest(`#__mk_wdpw_wrap_${idx}__`)) return;
+
+        const parent = el.parentElement;
+        if (!parent) return;
+        if (getComputedStyle(parent).position === "static") parent.style.position = "relative";
+
+        el.style.paddingRight = "110px";
+        el.style.boxSizing = "border-box";
+
+        const btn = document.createElement("button");
+        btn.id = btnId;
+        btn.type = "button";
+        btn.innerHTML = "🔒 Điền MK RT";
+        btn.style.cssText = "position:absolute;right:28px;top:50%;transform:translateY(-50%);background:#e91e63;color:#fff;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;font-weight:700;font-size:11px;z-index:9999;white-space:nowrap;touch-action:manipulation;";
+        btn.addEventListener("mousedown", e => e.preventDefault());
+        btn.addEventListener("click", async () => {
+          btn.textContent = "⌨️..."; btn.disabled = true;
+          await typeIntoInput(el, WITHDRAW_PASSWORD);
+          btn.textContent = "✅"; btn.style.background = "#2e7d32";
+          setTimeout(() => { btn.innerHTML = "🔒 Điền MK RT"; btn.style.background = "#e91e63"; btn.disabled = false; }, 1500);
+        });
+        parent.appendChild(btn);
+      });
+    })();
+
     injectBankBtn(getNameInput, "__mk_name_btn__", "__mk_name_wrapper__", "👤 Điền Tên", "#f60", async (btn) => {
       await showPicker(async (account) => {
         setLastAccount(account);
@@ -789,6 +829,8 @@
       const stkEl = getStkInput();
       if (!stkEl) return;
       if (stkEl.closest("#__mk_stk_wrapper__")) return;
+      // Bỏ qua nếu đây là ô username (placeholder có chữ "tên" hoặc "username")
+      if (/tên|ten|username/i.test(stkEl.placeholder || "")) return;
 
       const parent = stkEl.parentElement;
       if (!parent) return;
