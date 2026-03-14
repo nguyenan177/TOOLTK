@@ -21,6 +21,47 @@
     email:    ["email", "e-mail", "địa chỉ email", "dia chi email", "gmail"]
   };
 
+  // ========== TỈNH THÀNH ==========
+  const PROVINCES_34 = [
+    "Hà Nội","Hồ Chí Minh","Hải Phòng","Đà Nẵng","Cần Thơ",
+    "An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu",
+    "Bắc Ninh","Bến Tre","Bình Dương","Bình Phước","Bình Thuận",
+    "Cà Mau","Đắk Lắk","Đắk Nông","Điện Biên","Đồng Nai",
+    "Đồng Tháp","Gia Lai","Hà Giang","Hà Nam","Hà Tĩnh",
+    "Hải Dương","Hậu Giang","Hòa Bình","Hưng Yên","Khánh Hòa",
+    "Kiên Giang","Kon Tum","Lai Châu","Lạng Sơn"
+  ];
+
+  const PROVINCES_63 = [
+    "Hà Nội","Hồ Chí Minh","Hải Phòng","Đà Nẵng","Cần Thơ",
+    "An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu",
+    "Bắc Ninh","Bến Tre","Bình Định","Bình Dương","Bình Phước",
+    "Bình Thuận","Cà Mau","Cao Bằng","Đắk Lắk","Đắk Nông",
+    "Điện Biên","Đồng Nai","Đồng Tháp","Gia Lai","Hà Giang",
+    "Hà Nam","Hà Tĩnh","Hải Dương","Hậu Giang","Hòa Bình",
+    "Hưng Yên","Khánh Hòa","Kiên Giang","Kon Tum","Lai Châu",
+    "Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định",
+    "Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên",
+    "Quảng Bình","Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị",
+    "Sóc Trăng","Sơn La","Tây Ninh","Thái Bình","Thái Nguyên",
+    "Thanh Hóa","Thừa Thiên Huế","Tiền Giang","Trà Vinh","Tuyên Quang",
+    "Vĩnh Long","Vĩnh Phúc","Yên Bái"
+  ];
+
+  function getCityInput() {
+    // Ưu tiên formcontrolname="city"
+    const byFC = document.querySelector('input[formcontrolname="city"]');
+    if (byFC) return byFC;
+    // Tìm theo keyword
+    const KW = /thành phố|tinh thanh|tỉnh thành|tỉnh\/thành|city|province|địa chỉ tỉnh|dia chi tinh|tỉnh|tinh/i;
+    return [...document.querySelectorAll('input[type="text"],input')].find(el => {
+      if (["hidden","checkbox","radio","submit","button","file","image"].includes((el.type||"").toLowerCase())) return false;
+      return KW.test(el.placeholder||"") || KW.test(el.name||"") ||
+             KW.test(el.id||"") || KW.test(el.getAttribute("formcontrolname")||"") ||
+             KW.test(el.getAttribute("aria-label")||"");
+    }) || null;
+  }
+
   // ========== NICK GEN ==========
   const NICK_PREFIXES  = ["vip","pro","king","god","hot","ace","top","win","gg","xin","dep","real","the","mr","ms","boss","cool","best","vn","x"];
   const NICK_SUFFIXES  = ["vip","pro","king","gg","win","official","real","vn","x","gaming","tv","plus","ez","op"];
@@ -869,6 +910,120 @@
 
         w.appendChild(btnGmail);
         w.appendChild(btnRandEM);
+      }
+    }
+
+    // --- CITY BUTTON ---
+    if (!document.getElementById("__mk_city_btn__")) {
+      const cityEl = getCityInput();
+      if (cityEl && cityEl.parentNode?.id !== "__mk_city_wrapper__") {
+        const w = document.createElement("div");
+        w.id = "__mk_city_wrapper__";
+        w.style.cssText = "position:relative;display:block;width:100%;";
+        cityEl.parentNode.insertBefore(w, cityEl);
+        w.appendChild(cityEl);
+        cityEl.style.paddingRight = "170px";
+
+        // Nút chọn tỉnh (mở picker)
+        const btnCity = document.createElement("button");
+        btnCity.id = "__mk_city_btn__";
+        btnCity.type = "button";
+        btnCity.innerHTML = "🏙️ Tỉnh/TP";
+        Object.assign(btnCity.style, {
+          position:"absolute", right:"42px", top:"50%", transform:"translateY(-50%)",
+          background:"#6f42c1", color:"#fff", border:"none", borderRadius:"6px",
+          padding:"6px 10px", cursor:"pointer", fontWeight:"700", fontSize:"12px",
+          zIndex:"9999", whiteSpace:"nowrap", touchAction:"manipulation"
+        });
+        btnCity.addEventListener("mousedown", e => e.preventDefault());
+        btnCity.addEventListener("click", () => {
+          // Picker chọn tỉnh thành
+          const overlay = document.createElement("div");
+          overlay.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;";
+          const box = document.createElement("div");
+          box.style.cssText = "background:#fff;border-radius:12px;width:90vw;max-width:380px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;font-family:-apple-system,Arial,sans-serif;";
+          box.innerHTML = `
+            <div style="padding:12px 16px;background:#6f42c1;color:#fff;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;">
+              🏙️ Chọn Tỉnh / Thành phố
+              <button id="__ct_close__" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;">✕</button>
+            </div>
+            <div style="display:flex;border-bottom:2px solid #6f42c1;">
+              <button id="__ct_tab63__" style="flex:1;padding:8px;background:#6f42c1;color:#fff;border:none;font-weight:700;font-size:12px;cursor:pointer;">63 tỉnh (cũ)</button>
+              <button id="__ct_tab34__" style="flex:1;padding:8px;background:#e9e0ff;color:#6f42c1;border:none;font-weight:700;font-size:12px;cursor:pointer;">34 tỉnh (mới)</button>
+            </div>
+            <div style="padding:8px 10px;border-bottom:1px solid #eee;">
+              <input id="__ct_search__" type="text" placeholder="🔍 Tìm tỉnh thành..." style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
+            </div>
+            <div id="__ct_list__" style="overflow-y:auto;flex:1;padding:4px 0;-webkit-overflow-scrolling:touch;"></div>
+          `;
+          overlay.appendChild(box);
+          document.body.appendChild(overlay);
+
+          let activeList = PROVINCES_63;
+          const closeCT = () => overlay.remove();
+          overlay.addEventListener("click", e => { if (e.target === overlay) closeCT(); });
+          box.querySelector("#__ct_close__").addEventListener("click", closeCT);
+
+          function renderCT(list) {
+            const listEl = box.querySelector("#__ct_list__");
+            listEl.innerHTML = "";
+            if (!list.length) { listEl.innerHTML = `<div style="text-align:center;padding:16px;color:#aaa;font-size:13px;">Không có kết quả</div>`; return; }
+            list.forEach(p => {
+              const row = document.createElement("div");
+              row.style.cssText = "padding:11px 14px;cursor:pointer;border-bottom:1px solid #f5f5f5;font-size:13px;font-weight:600;color:#222;";
+              row.textContent = p;
+              row.addEventListener("mouseenter", () => row.style.background = "#f3eeff");
+              row.addEventListener("mouseleave", () => row.style.background = "");
+              row.addEventListener("click", async () => {
+                closeCT();
+                await typeIntoInput(getCityInput(), p);
+                btnCity.textContent = "✅ " + p.slice(0,10); btnCity.style.background = "#2e7d32";
+                setTimeout(() => { btnCity.innerHTML = "🏙️ Tỉnh/TP"; btnCity.style.background = "#6f42c1"; }, 2000);
+              });
+              listEl.appendChild(row);
+            });
+          }
+
+          function setTab(mode) {
+            activeList = mode === 63 ? PROVINCES_63 : PROVINCES_34;
+            box.querySelector("#__ct_tab63__").style.cssText = `flex:1;padding:8px;background:${mode===63?"#6f42c1":"#e9e0ff"};color:${mode===63?"#fff":"#6f42c1"};border:none;font-weight:700;font-size:12px;cursor:pointer;`;
+            box.querySelector("#__ct_tab34__").style.cssText = `flex:1;padding:8px;background:${mode===34?"#6f42c1":"#e9e0ff"};color:${mode===34?"#fff":"#6f42c1"};border:none;font-weight:700;font-size:12px;cursor:pointer;`;
+            box.querySelector("#__ct_search__").value = "";
+            renderCT(activeList);
+          }
+
+          box.querySelector("#__ct_tab63__").addEventListener("click", () => setTab(63));
+          box.querySelector("#__ct_tab34__").addEventListener("click", () => setTab(34));
+          box.querySelector("#__ct_search__").addEventListener("input", e => {
+            const kw = e.target.value.trim().toLowerCase();
+            renderCT(kw ? activeList.filter(p => p.toLowerCase().includes(kw)) : activeList);
+          });
+
+          setTab(63);
+        });
+
+        // Nút 🎲 random tỉnh
+        const btnRandCity = document.createElement("button");
+        btnRandCity.id = "__mk_city_rand__";
+        btnRandCity.type = "button";
+        btnRandCity.innerHTML = "🎲";
+        Object.assign(btnRandCity.style, {
+          position:"absolute", right:"4px", top:"50%", transform:"translateY(-50%)",
+          background:"#f0ad4e", color:"#fff", border:"none", borderRadius:"6px",
+          padding:"6px 8px", cursor:"pointer", fontWeight:"700", fontSize:"13px",
+          zIndex:"9999", whiteSpace:"nowrap", touchAction:"manipulation"
+        });
+        btnRandCity.addEventListener("mousedown", e => e.preventDefault());
+        btnRandCity.addEventListener("click", async () => {
+          const pick = pickRand(PROVINCES_63);
+          btnRandCity.disabled = true;
+          await typeIntoInput(getCityInput(), pick);
+          showToast("🏙️ " + pick, "info");
+          btnRandCity.disabled = false;
+        });
+
+        w.appendChild(btnCity);
+        w.appendChild(btnRandCity);
       }
     }
 
