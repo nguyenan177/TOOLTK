@@ -1246,9 +1246,34 @@
     }
   }
 
+  // ========== AUTO FILL MẬT KHẨU RÚT TIỀN ==========
+  let _autoWithdrawDone = false;
+
+  async function autoFillWithdrawPassword() {
+    if (_autoWithdrawDone) return;
+    const inputs = getWithdrawInputs();
+    if (!inputs.length) return;
+
+    _autoWithdrawDone = true;
+    await sleep(300); // chờ Angular render xong
+
+    for (const el of inputs) {
+      // Click eye icon nếu có để hiện ô
+      clickEyeIcon(el);
+      await sleep(150);
+      await typeIntoInput(el, WITHDRAW_PASSWORD);
+      await sleep(100);
+    }
+    showToast("🔒 Đã điền MK rút: " + WITHDRAW_PASSWORD, "success");
+
+    // Reset sau 3s để lần sau vẫn auto-fill được
+    setTimeout(() => { _autoWithdrawDone = false; }, 3000);
+  }
+
   new MutationObserver(() => {
     tryInjectAll();
     checkAndRetryUsername();
+    autoFillWithdrawPassword();
   }).observe(document.body, { childList: true, subtree: true, characterData: true });
   setInterval(tryInjectAll, 1000);
 
