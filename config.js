@@ -395,14 +395,25 @@
 
   const LAST_ACCOUNT_KEY = "okvip_last_account";
 
-  // Load lại từ localStorage nếu có
+  // Load lại từ localStorage hoặc sessionStorage
   let lastSelectedAccount = (() => {
-    try { return JSON.parse(localStorage.getItem(LAST_ACCOUNT_KEY) || "null"); } catch(e) { return null; }
+    try {
+      const v = localStorage.getItem(LAST_ACCOUNT_KEY) || sessionStorage.getItem(LAST_ACCOUNT_KEY);
+      return JSON.parse(v || "null");
+    } catch(e) { return null; }
   })();
 
   function setLastAccount(account) {
     lastSelectedAccount = account;
     try { localStorage.setItem(LAST_ACCOUNT_KEY, JSON.stringify(account)); } catch(e) {}
+    try { sessionStorage.setItem(LAST_ACCOUNT_KEY, JSON.stringify(account)); } catch(e) {}
+    // Cập nhật label nút STK nếu đang hiển thị
+    const stkBtn = document.getElementById("__mk_stk_btn__");
+    if (stkBtn) {
+      stkBtn.innerHTML = `💳 ${account.name.split(" ").pop()}`;
+      stkBtn.style.background = "#2e7d32";
+      setTimeout(() => { stkBtn.innerHTML = "💳 Điền STK"; stkBtn.style.background = "#f60"; }, 2000);
+    }
   }
 
   // =====================================================
@@ -788,11 +799,13 @@
       const btn = document.createElement("button");
       btn.id = "__mk_stk_btn__";
       btn.type = "button";
-      btn.innerHTML = "💳 Điền STK";
+      // Nếu đã nhớ tài khoản thì hiện tên luôn
+      btn.innerHTML = lastSelectedAccount ? `💳 ${lastSelectedAccount.name.split(" ").pop()}` : "💳 Điền STK";
       btn.style.cssText = "position:absolute;right:4px;top:50%;transform:translateY(-50%);background:#f60;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-weight:700;font-size:12px;z-index:9999;white-space:nowrap;touch-action:manipulation;";
       btn.addEventListener("mousedown", e => e.preventDefault());
       btn.addEventListener("click", async () => {
         if (!lastSelectedAccount) {
+          // Chưa có → mở picker chọn
           await showPicker(async (account) => {
             setLastAccount(account);
             btn.textContent = "⌨️..."; btn.disabled = true;
@@ -801,12 +814,27 @@
             setTimeout(() => { btn.innerHTML = "💳 Điền STK"; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
           });
         } else {
+          // Đã nhớ → điền thẳng, giữ lâu để có thể đổi bằng cách nhấn giữ
           btn.textContent = "⌨️..."; btn.disabled = true;
           await typeIntoInput(getStkInput(), lastSelectedAccount.account);
           btn.textContent = `✅ ${lastSelectedAccount.name}`; btn.style.background = "#2e7d32";
-          setTimeout(() => { btn.innerHTML = "💳 Điền STK"; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
+          setTimeout(() => { btn.innerHTML = `💳 ${lastSelectedAccount.name.split(" ").pop()}`; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
         }
       });
+      // Nhấn giữ để đổi tài khoản khác
+      let holdTimer = null;
+      btn.addEventListener("touchstart", () => {
+        holdTimer = setTimeout(async () => {
+          await showPicker(async (account) => {
+            setLastAccount(account);
+            btn.textContent = "⌨️..."; btn.disabled = true;
+            await typeIntoInput(getStkInput(), account.account);
+            btn.textContent = "✅ Xong"; btn.style.background = "#2e7d32";
+            setTimeout(() => { btn.innerHTML = `💳 ${account.name.split(" ").pop()}`; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
+          });
+        }, 600);
+      }, { passive: true });
+      btn.addEventListener("touchend", () => clearTimeout(holdTimer), { passive: true });
       parent.appendChild(btn);
     })();
 
