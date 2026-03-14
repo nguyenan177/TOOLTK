@@ -435,11 +435,7 @@
         // 1. Điền Tên
         await typeIntoInput(getNameInput(), account.name);
 
-        // 2. Điền STK (nếu có)
-        const tStk = getStkInput();
-        if (tStk) { await sleep(200); await typeIntoInput(tStk, account.account); }
-
-        // 3. Tự động Điền SĐT — click thẳng nút đã inject
+        // 2. Tự động click Điền SĐT
         await sleep(300);
         const sdtBtn = document.getElementById("okvip-btn-phone");
         if (sdtBtn) {
@@ -456,7 +452,7 @@
           });
         }
 
-        // 4. Tự động Điền MK — click thẳng nút đã inject
+        // 3. Tự động click Điền MK
         await sleep(400);
         const mkBtn = document.getElementById("__mk_fill_btn__");
         if (mkBtn) {
