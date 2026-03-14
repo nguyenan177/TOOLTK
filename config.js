@@ -16,8 +16,122 @@
   const FIELD_KEYWORDS = {
     password: ["mật khẩu", "password", "mat khau", "pass"],
     name:     ["họ và tên", "ho va ten", "họ tên", "full name", "tên thật", "ten that", "tên người", "họ tên thật"],
-    stk:      ["số tài khoản", "so tai khoan", "stk", "account number", "tài khoản ngân hàng", "bank account", "số tk"]
+    stk:      ["số tài khoản", "so tai khoan", "stk", "account number", "tài khoản ngân hàng", "bank account", "số tk"],
+    username: ["tên tài khoản", "ten tai khoan", "username", "tài khoản", "tai khoan", "đăng nhập", "login", "nhập tên tài khoản", "account"]
   };
+
+  // ========== NICK GEN ==========
+  const NICK_PREFIXES  = ["vip","pro","king","god","hot","ace","top","win","gg","xin","dep","real","the","mr","ms","boss","cool","best","vn","x"];
+  const NICK_SUFFIXES  = ["vip","pro","king","gg","win","official","real","vn","x","gaming","tv","plus","ez","op"];
+
+  function removeDiacritics(str) {
+    return str.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D");
+  }
+
+  function parseName(fullName) {
+    const parts = removeDiacritics(fullName).toLowerCase().trim().split(/\s+/);
+    const first  = parts[parts.length - 1]; // Tên (cuối)
+    const last   = parts[0];                // Họ (đầu)
+    const middle = parts.length > 2 ? parts.slice(1, -1).join("") : "";
+    return { first, last, middle, parts };
+  }
+
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function randPad(n)   { return String(randInt(0,99)).padStart(n,"0"); }
+  function randDDMM()   { const d=randInt(1,28),m=randInt(1,12); return String(d).padStart(2,"0")+String(m).padStart(2,"0"); }
+  function randYear()   { return String(randInt(90,05).toString().padStart(2,"0")); }
+  function pickRand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function genNickOptions(fullName) {
+    const { first, last, middle, parts } = parseName(fullName);
+    const pre = pickRand(NICK_PREFIXES);
+    const suf = pickRand(NICK_SUFFIXES);
+    const ddmm = randDDMM();
+    const r2 = randPad(2);
+    const r4 = String(randInt(1000,9999));
+    const yy = String(randInt(90,9)).padStart(2,"0");
+
+    // Tên đệm viết tắt
+    const midInitials = parts.slice(1,-1).map(p=>p[0]).join("");
+
+    return [
+      { label: "Họ + tiền tố + 2 số",        value: `${last}${pre}${r2}` },
+      { label: "Tên + tiền tố",               value: `${first}${pre}` },
+      { label: "Họ + tên + 2 số",             value: `${last}${first}${r2}` },
+      { label: "Họ + ngày sinh (ddmm)",        value: `${last}${ddmm}` },
+      { label: "Tên + ngày sinh",             value: `${first}${ddmm}` },
+      { label: "Họ + tên + ngày sinh",        value: `${last}${first}${ddmm}` },
+      { label: "Họ + đệm viết tắt + tên",    value: `${last}${midInitials}${first}` },
+      { label: "Tiền tố + họ + tên",          value: `${pre}${last}${first}` },
+      { label: "Họ + tên + hậu tố",           value: `${last}${first}${suf}` },
+      { label: "Họ + 4 số",                   value: `${last}${r4}` },
+      { label: "Tên + 4 số",                  value: `${first}${r4}` },
+      { label: "Họ + tên + 4 số",             value: `${last}${first}${r4}` },
+      { label: "Chỉ họ",                      value: `${last}` },
+      { label: "Chỉ tên",                     value: `${first}` },
+    ];
+  }
+
+  function getUsernameInput() {
+    // Ưu tiên data-input-name="account"
+    const byData = document.querySelector('input[data-input-name="account"], input[data-input-name="username"]');
+    if (byData) return byData;
+    return findInputByKeywords(FIELD_KEYWORDS.username);
+  }
+
+  async function showNickPicker(fullName, onSelect) {
+    const options = genNickOptions(fullName);
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;";
+
+    const box = document.createElement("div");
+    box.style.cssText = "background:#fff;border-radius:12px;width:90vw;max-width:360px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;font-family:-apple-system,Arial,sans-serif;";
+    box.innerHTML = `
+      <div style="padding:12px 16px;background:#1a73e8;color:#fff;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;">
+        🆔 Chọn kiểu Username
+        <button id="__nk_close__" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <div style="padding:6px 12px;background:#e8f0fe;font-size:12px;color:#1a73e8;font-weight:600;">
+        👤 Tên: <b>${fullName}</b>
+      </div>
+      <div id="__nk_list__" style="overflow-y:auto;flex:1;padding:6px 0;-webkit-overflow-scrolling:touch;"></div>
+      <div style="padding:8px 12px;border-top:1px solid #eee;display:flex;gap:6px;">
+        <button id="__nk_regen__" style="flex:1;padding:7px;background:#f0ad4e;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🎲 Random lại</button>
+      </div>
+    `;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    function renderOptions(opts) {
+      const listEl = box.querySelector("#__nk_list__");
+      listEl.innerHTML = "";
+      opts.forEach(o => {
+        const row = document.createElement("div");
+        row.style.cssText = "padding:10px 14px;cursor:pointer;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between;align-items:center;";
+        row.innerHTML = `
+          <div>
+            <div style="font-weight:700;font-size:14px;color:#111;font-family:monospace;">${o.value}</div>
+            <div style="font-size:11px;color:#888;margin-top:2px;">${o.label}</div>
+          </div>
+          <span style="background:#e8f0fe;color:#1a73e8;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0;">Chọn</span>
+        `;
+        row.addEventListener("touchstart", () => row.style.background = "#e8f0fe", { passive: true });
+        row.addEventListener("touchend",   () => row.style.background = "", { passive: true });
+        row.addEventListener("mouseenter", () => row.style.background = "#e8f0fe");
+        row.addEventListener("mouseleave", () => row.style.background = "");
+        row.addEventListener("click", () => { onSelect(o.value); close(); });
+        listEl.appendChild(row);
+      });
+    }
+
+    const close = () => overlay.remove();
+    overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+    box.querySelector("#__nk_close__").addEventListener("click", close);
+    box.querySelector("#__nk_regen__").addEventListener("click", () => renderOptions(genNickOptions(fullName)));
+
+    renderOptions(options);
+  }
 
   function findInputByKeywords(keywords, type = null) {
     const allInputs = document.querySelectorAll("input");
@@ -510,6 +624,21 @@
         btn.textContent = `✅ ${lastSelectedAccount.name}`; btn.style.background = "#2e7d32";
         setTimeout(() => { btn.innerHTML = "💳 Điền STK"; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
       }
+    });
+
+    // --- USERNAME BUTTON ---
+    injectBankBtn(getUsernameInput, "__mk_user_btn__", "__mk_user_wrapper__", "🆔 Điền TK", "#1a73e8", async (btn) => {
+      if (!lastSelectedAccount) {
+        showToast("⚠️ Chưa chọn tài khoản, bấm Điền Tên trước!", "error");
+        return;
+      }
+      await showNickPicker(lastSelectedAccount.name, async (nick) => {
+        btn.textContent = "⌨️..."; btn.disabled = true;
+        const el = getUsernameInput();
+        if (el) await typeIntoInput(el, nick);
+        btn.textContent = "✅ Xong"; btn.style.background = "#2e7d32";
+        setTimeout(() => { btn.innerHTML = "🆔 Điền TK"; btn.style.background = "#1a73e8"; btn.disabled = false; }, 1500);
+      });
     });
 
     // --- SIM / OTP BUTTONS ---
