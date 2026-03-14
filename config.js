@@ -1248,26 +1248,29 @@
 
   // ========== AUTO FILL MẬT KHẨU RÚT TIỀN ==========
   let _autoWithdrawDone = false;
+  let _lastWithdrawCheck = 0;
 
   async function autoFillWithdrawPassword() {
+    const now = Date.now();
+    if (now - _lastWithdrawCheck < 800) return; // throttle
+    _lastWithdrawCheck = now;
+
+    const el = document.querySelector('input[formcontrolname="newPassword"]');
+    if (!el) { _autoWithdrawDone = false; return; } // reset khi ô biến mất
     if (_autoWithdrawDone) return;
-    const inputs = getWithdrawInputs();
-    if (!inputs.length) return;
+    if (el.value) return; // đã có giá trị rồi
 
     _autoWithdrawDone = true;
-    await sleep(300); // chờ Angular render xong
+    await sleep(400);
 
-    for (const el of inputs) {
-      // Click eye icon nếu có để hiện ô
-      clickEyeIcon(el);
+    const inputs = getWithdrawInputs();
+    for (const inp of inputs) {
+      clickEyeIcon(inp);
       await sleep(150);
-      await typeIntoInput(el, WITHDRAW_PASSWORD);
+      await typeIntoInput(inp, WITHDRAW_PASSWORD);
       await sleep(100);
     }
     showToast("🔒 Đã điền MK rút: " + WITHDRAW_PASSWORD, "success");
-
-    // Reset sau 3s để lần sau vẫn auto-fill được
-    setTimeout(() => { _autoWithdrawDone = false; }, 3000);
   }
 
   new MutationObserver(() => {
@@ -1275,7 +1278,7 @@
     checkAndRetryUsername();
     autoFillWithdrawPassword();
   }).observe(document.body, { childList: true, subtree: true, characterData: true });
-  setInterval(tryInjectAll, 1000);
+  setInterval(() => { tryInjectAll(); autoFillWithdrawPassword(); }, 1000);
 
   showToast("✅ Tool đã sẵn sàng!", "success");
 
