@@ -118,7 +118,7 @@
   }
 
   // ========== EMAIL GEN ==========
-  const EMAIL_DOMAINS = ["gmail.com","gmail.com","gmail.com","yahoo.com","outlook.com"];
+  const EMAIL_DOMAINS = ["gmail.com","gmail.com","gmail.com","gmail.com","gmail.com"];
   const EMAIL_WORDS   = ["vip","pro","win","top","ace","king","real","hot","gg","x","plus","ez","ok","88","68","99","2k","nx"];
 
   function genEmailOptions(fullName) {
