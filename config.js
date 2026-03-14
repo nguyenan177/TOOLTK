@@ -245,10 +245,25 @@
   }
 
   function getWithdrawInputs() {
-    // Tìm tất cả input có placeholder liên quan đến mật khẩu rút tiền
-    const KW = /mật khẩu rút|mat khau rut|withdraw.*pass|rút tiền/i;
-    return [...document.querySelectorAll('input[type="password"], input[type="text"]')]
-      .filter(el => KW.test(el.placeholder || "") || KW.test(el.getAttribute("aria-label") || ""));
+    // Ưu tiên formcontrolname cụ thể
+    const byFC = [
+      document.querySelector('input[formcontrolname="newPassword"]'),
+      document.querySelector('input[formcontrolname="confirm"]'),
+    ].filter(Boolean);
+    if (byFC.length) return byFC;
+    // Fallback: tìm theo placeholder
+    const KW = /mật khẩu rút|mat khau rut|xác nhận.*mật khẩu rút|withdraw.*pass/i;
+    return [...document.querySelectorAll('input')].filter(el =>
+      KW.test(el.placeholder || "") || KW.test(el.getAttribute("aria-label") || "")
+    );
+  }
+
+  function clickEyeIcon(inputEl) {
+    // Tìm icon mắt trong cùng container với input
+    const container = inputEl.closest("fieldset, div, label, section") || inputEl.parentElement;
+    if (!container) return;
+    const eye = container.querySelector('i.fa-eye, i[class*="eye"], i[class*="icon-eye"]');
+    if (eye) eye.click();
   }
   function getNameInput() { return findInputByKeywords(FIELD_KEYWORDS.name); }
   function getStkInput() {
@@ -732,14 +747,17 @@
         const btn = document.createElement("button");
         btn.id = btnId;
         btn.type = "button";
-        btn.innerHTML = "🔒 Điền MK RT";
-        btn.style.cssText = "position:absolute;right:28px;top:50%;transform:translateY(-50%);background:#e91e63;color:#fff;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;font-weight:700;font-size:11px;z-index:9999;white-space:nowrap;touch-action:manipulation;";
+        btn.innerHTML = "🔒 MK Rút";
+        btn.style.cssText = "position:absolute;right:36px;top:50%;transform:translateY(-50%);background:#e91e63;color:#fff;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;font-weight:700;font-size:11px;z-index:9999;white-space:nowrap;touch-action:manipulation;";
         btn.addEventListener("mousedown", e => e.preventDefault());
         btn.addEventListener("click", async () => {
           btn.textContent = "⌨️..."; btn.disabled = true;
+          // Click icon mắt để hiện ô nhập (nếu đang ẩn)
+          clickEyeIcon(el);
+          await sleep(150);
           await typeIntoInput(el, WITHDRAW_PASSWORD);
           btn.textContent = "✅"; btn.style.background = "#2e7d32";
-          setTimeout(() => { btn.innerHTML = "🔒 Điền MK RT"; btn.style.background = "#e91e63"; btn.disabled = false; }, 1500);
+          setTimeout(() => { btn.innerHTML = "🔒 MK Rút"; btn.style.background = "#e91e63"; btn.disabled = false; }, 1500);
         });
         parent.appendChild(btn);
       });
