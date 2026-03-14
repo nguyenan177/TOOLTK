@@ -197,19 +197,26 @@
   }
 
   function findPhoneInput() {
+    // 1. Tìm theo data attribute
     const direct = document.querySelector('input[data-input-name="phone"]');
     if (direct) return direct;
+    // 2. Tìm theo class mobile-input
+    const byClass = document.querySelector('input.mobile-input, input[class*="mobile-input"], input[class*="phone-input"]');
+    if (byClass) return byClass;
+    // 3. Tìm theo type=tel
     const tel = document.querySelector('input[type="tel"]');
     if (tel) return tel;
+    // 4. Tìm theo keyword trong các attribute
     const KW = /phone|mobile|sdt|sdт|điện thoại|dien thoai|số đt|nhập sđt|nhap sdt|nhập số|nhap so|số điện|so dien/i;
     const all = [...document.querySelectorAll('input[type="text"],input[type="number"],input[type="tel"]')];
     const byAttr = all.find(el =>
       KW.test(el.placeholder||"") || KW.test(el.name||"") ||
       KW.test(el.id||"") || KW.test(el.getAttribute("data-input-name")||"") ||
-      KW.test(el.getAttribute("aria-label")||"")
+      KW.test(el.getAttribute("aria-label")||"") ||
+      KW.test(el.className||"")
     );
     if (byAttr) return byAttr;
-    // Tìm theo label liên kết
+    // 5. Tìm theo label hoặc container
     for (const el of all) {
       if (el.id) {
         const lbl = document.querySelector(`label[for="${el.id}"]`);
@@ -217,7 +224,6 @@
       }
       const parentLbl = el.closest("label");
       if (parentLbl && KW.test(parentLbl.textContent||"")) return el;
-      // Tìm text gần nhất trong parent container
       const container = el.closest("div,li,td,tr,section");
       if (container && KW.test(container.textContent||"")) return el;
     }
