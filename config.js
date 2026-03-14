@@ -16,7 +16,7 @@
   const FIELD_KEYWORDS = {
     password: ["mật khẩu", "password", "mat khau", "pass"],
     name:     ["họ và tên", "ho va ten", "họ tên", "full name", "tên thật", "ten that", "tên người", "họ tên thật"],
-    stk:      ["số tài khoản", "so tai khoan", "stk", "account number", "tài khoản ngân hàng", "bank account", "số tk"],
+    stk:      ["số tài khoản ngân hàng", "so tai khoan ngan hang", "stk", "account number", "bank account", "số tk ngân hàng", "nhập số tài khoản"],
     username: ["tên tài khoản", "ten tai khoan", "username", "tài khoản", "tai khoan", "đăng nhập", "login", "nhập tên tài khoản", "account"],
     email:    ["email", "e-mail", "địa chỉ email", "dia chi email", "gmail"]
   };
