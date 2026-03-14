@@ -241,7 +241,14 @@
   }
 
   function getPasswordInput() {
-    return document.querySelector("input[type='password']") || findInputByKeywords(FIELD_KEYWORDS.password);
+    // Loại trừ ô mật khẩu rút tiền
+    const WITHDRAW_FC = ["newPassword", "confirm", "newpassword", "confirmpassword"];
+    const pwEl = document.querySelector("input[type='password']");
+    if (pwEl && !WITHDRAW_FC.includes(pwEl.getAttribute("formcontrolname") || "")) return pwEl;
+    // Tìm theo keyword nhưng loại trừ formcontrolname liên quan rút tiền
+    const found = findInputByKeywords(FIELD_KEYWORDS.password);
+    if (found && !WITHDRAW_FC.includes(found.getAttribute("formcontrolname") || "")) return found;
+    return null;
   }
 
   function getWithdrawInputs() {
@@ -723,6 +730,7 @@
     // --- BANK BUTTONS ---
     injectBankBtn(getPasswordInput, "__mk_fill_btn__", "__mk_wrapper__", "🔑 Điền MK", "#f60", async (btn) => {
       const t = getPasswordInput();
+      if (!t) return;
       btn.textContent = "⌨️..."; btn.disabled = true;
       await typeIntoInput(t, PASSWORD);
       btn.textContent = "✅ Xong"; btn.style.background = "#2e7d32";
