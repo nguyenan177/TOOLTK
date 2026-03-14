@@ -446,7 +446,7 @@
             const check = setInterval(() => {
               waited += 500;
               const txt = document.getElementById("okvip-btn-phone")?.textContent || "";
-              const done = txt.includes("✅") || txt.includes("❌") || txt.includes("Hết") || waited >= 15000;
+              const done = txt.includes("✅") || txt.includes("❌") || txt.includes("Hết") || waited >= 3000;
               if (done) { clearInterval(check); resolve(); }
             }, 500);
           });
