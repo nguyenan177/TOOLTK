@@ -393,7 +393,17 @@
     });
   }
 
-  let lastSelectedAccount = null;
+  const LAST_ACCOUNT_KEY = "okvip_last_account";
+
+  // Load lại từ localStorage nếu có
+  let lastSelectedAccount = (() => {
+    try { return JSON.parse(localStorage.getItem(LAST_ACCOUNT_KEY) || "null"); } catch(e) { return null; }
+  })();
+
+  function setLastAccount(account) {
+    lastSelectedAccount = account;
+    try { localStorage.setItem(LAST_ACCOUNT_KEY, JSON.stringify(account)); } catch(e) {}
+  }
 
   // =====================================================
   // ========== PHẦN 2: SIM / OTP TOOL ==========
@@ -685,7 +695,7 @@
 
     injectBankBtn(getNameInput, "__mk_name_btn__", "__mk_name_wrapper__", "👤 Điền Tên", "#f60", async (btn) => {
       await showPicker(async (account) => {
-        lastSelectedAccount = account;
+        setLastAccount(account);
         btn.textContent = "⌨️..."; btn.disabled = true;
 
         // 1. Điền Tên
@@ -694,8 +704,8 @@
         // 2. Tự động Random Gmail và điền
         await sleep(200);
         const emailEl2 = getEmailInput();
-        if (emailEl2 && lastSelectedAccount) {
-          const emailOpts = genEmailOptions(lastSelectedAccount.name);
+        if (emailEl2) {
+          const emailOpts = genEmailOptions(account.name);
           const emailPick = emailOpts[Math.floor(Math.random() * emailOpts.length)];
           await typeIntoInput(emailEl2, emailPick.value);
         }
@@ -703,15 +713,15 @@
         // 3. Tự động Random TK và điền
         await sleep(200);
         const userEl = getUsernameInput();
-        if (userEl && lastSelectedAccount) {
-          const opts = genNickOptions(lastSelectedAccount.name);
+        if (userEl) {
+          const opts = genNickOptions(account.name);
           const pick = opts[Math.floor(Math.random() * opts.length)];
           await typeIntoInput(userEl, pick.value);
           showToast("🎲 TK: " + pick.value, "info");
         } else {
           const fallbackEl = document.querySelector('input[data-input-name="account"]');
-          if (fallbackEl && lastSelectedAccount) {
-            const opts = genNickOptions(lastSelectedAccount.name);
+          if (fallbackEl) {
+            const opts = genNickOptions(account.name);
             const pick = opts[Math.floor(Math.random() * opts.length)];
             fallbackEl.focus();
             const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
@@ -721,7 +731,15 @@
           }
         }
 
-        // 4. Tự động click Điền SĐT
+        // 4. Tự động điền STK
+        await sleep(200);
+        const stkEl2 = getStkInput();
+        if (stkEl2) {
+          await typeIntoInput(stkEl2, account.account);
+          showToast("💳 STK: " + account.account, "info");
+        }
+
+        // 5. Tự động click Điền SĐT
         await sleep(300);
         const sdtBtn = document.getElementById("okvip-btn-phone");
         if (sdtBtn) {
@@ -737,7 +755,7 @@
           });
         }
 
-        // 5. Tự động click Điền MK
+        // 6. Tự động click Điền MK
         await sleep(400);
         const mkBtn = document.getElementById("__mk_fill_btn__");
         if (mkBtn) {
@@ -776,7 +794,7 @@
       btn.addEventListener("click", async () => {
         if (!lastSelectedAccount) {
           await showPicker(async (account) => {
-            lastSelectedAccount = account;
+            setLastAccount(account);
             btn.textContent = "⌨️..."; btn.disabled = true;
             await typeIntoInput(getStkInput(), account.account);
             btn.textContent = "✅ Xong"; btn.style.background = "#2e7d32";
