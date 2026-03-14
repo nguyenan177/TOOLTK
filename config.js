@@ -598,10 +598,15 @@
         // 1. Điền Tên
         await typeIntoInput(getNameInput(), account.name);
 
-        // 2. Tự động Random TK
+        // 2. Tự động Random TK và điền luôn
         await sleep(200);
-        const randBtn = document.getElementById('__mk_user_rand__');
-        if (randBtn) randBtn.click();
+        const userEl = getUsernameInput();
+        if (userEl && lastSelectedAccount) {
+          const opts = genNickOptions(lastSelectedAccount.name);
+          const pick = opts[Math.floor(Math.random() * opts.length)];
+          await typeIntoInput(userEl, pick.value);
+          showToast("🎲 " + pick.value, "info");
+        }
 
         // 3. Tự động click Điền SĐT
         await sleep(300);
