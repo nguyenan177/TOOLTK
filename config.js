@@ -49,13 +49,18 @@
   ];
 
   function getCityInput() {
-    // Ưu tiên formcontrolname="city"
+    // 1. Ưu tiên formcontrolname="city"
     const byFC = document.querySelector('input[formcontrolname="city"]');
     if (byFC) return byFC;
-    // Tìm theo keyword
-    const KW = /thành phố|tinh thanh|tỉnh thành|tỉnh\/thành|city|province|địa chỉ tỉnh|dia chi tinh|tỉnh|tinh/i;
-    return [...document.querySelectorAll('input[type="text"],input')].find(el => {
-      if (["hidden","checkbox","radio","submit","button","file","image"].includes((el.type||"").toLowerCase())) return false;
+    // 2. Tìm theo placeholder chứa "thành phố" hoặc "tỉnh"
+    const byPH = [...document.querySelectorAll('input')].find(el =>
+      /thành phố|thanh pho|tỉnh thành|tinh thanh|city|province/i.test(el.placeholder||"")
+    );
+    if (byPH) return byPH;
+    // 3. Tìm theo keyword rộng hơn
+    const KW = /city|province|tỉnh|tinh/i;
+    return [...document.querySelectorAll('input')].find(el => {
+      if (["hidden","checkbox","radio","submit","button","file","image"].includes((el.type||"text").toLowerCase())) return false;
       return KW.test(el.placeholder||"") || KW.test(el.name||"") ||
              KW.test(el.id||"") || KW.test(el.getAttribute("formcontrolname")||"") ||
              KW.test(el.getAttribute("aria-label")||"");
@@ -916,11 +921,17 @@
     // --- CITY BUTTON ---
     if (!document.getElementById("__mk_city_btn__")) {
       const cityEl = getCityInput();
-      if (cityEl && cityEl.parentNode?.id !== "__mk_city_wrapper__") {
+      if (cityEl && !cityEl.closest("#__mk_city_wrapper__")) {
+        // Tìm parent thực sự có position để gắn nút absolute
+        let anchor = cityEl.parentElement;
+        // Nếu parent là inline/static và quá nhỏ thì leo lên 1 cấp
+        if (anchor && getComputedStyle(anchor).display === "inline") anchor = anchor.parentElement;
+        if (!anchor) return;
+
         const w = document.createElement("div");
         w.id = "__mk_city_wrapper__";
         w.style.cssText = "position:relative;display:block;width:100%;";
-        cityEl.parentNode.insertBefore(w, cityEl);
+        anchor.insertBefore(w, cityEl);
         w.appendChild(cityEl);
         cityEl.style.paddingRight = "170px";
 
