@@ -913,29 +913,30 @@
 
   // ========== AUTO RETRY USERNAME KHI BỊ TRÙNG ==========
   let _retryingUsername = false;
-  new MutationObserver(async (mutations) => {
-    tryInjectAll();
+
+  const DUPE_REGEX = /tên tài khoản này đã tồn tại|tài khoản đã tồn tại|username.*exist|đã được sử dụng|already.*taken|account.*exist/i;
+
+  async function checkAndRetryUsername() {
     if (_retryingUsername) return;
-    for (const m of mutations) {
-      for (const node of m.addedNodes) {
-        const text = node.textContent || "";
-        if (/tên tài khoản này đã tồn tại|username.*exist|đã được sử dụng|already.*taken|tài khoản đã tồn tại/i.test(text)) {
-          _retryingUsername = true;
-          await sleep(300);
-          const userEl = getUsernameInput() || document.querySelector('input[data-input-name="account"]');
-          if (userEl && lastSelectedAccount) {
-            const opts = genNickOptions(lastSelectedAccount.name);
-            const pick = opts[Math.floor(Math.random() * opts.length)];
-            await typeIntoInput(userEl, pick.value);
-            showToast("🔄 TK trùng → đổi: " + pick.value, "info");
-          }
-          setTimeout(() => { _retryingUsername = false; }, 2000);
-          break;
-        }
+    const bodyText = document.body.innerText || "";
+    if (DUPE_REGEX.test(bodyText)) {
+      _retryingUsername = true;
+      await sleep(200);
+      const userEl = getUsernameInput() || document.querySelector('input[data-input-name="account"]');
+      if (userEl && lastSelectedAccount) {
+        const opts = genNickOptions(lastSelectedAccount.name);
+        const pick = opts[Math.floor(Math.random() * opts.length)];
+        await typeIntoInput(userEl, pick.value);
+        showToast("🔄 TK trùng → đổi: " + pick.value, "info");
       }
-      if (_retryingUsername) break;
+      setTimeout(() => { _retryingUsername = false; }, 3000);
     }
-  }).observe(document.body, { childList: true, subtree: true });
+  }
+
+  new MutationObserver(() => {
+    tryInjectAll();
+    checkAndRetryUsername();
+  }).observe(document.body, { childList: true, subtree: true, characterData: true });
   setInterval(tryInjectAll, 1000);
 
   // Toast khởi động
