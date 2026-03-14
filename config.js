@@ -31,8 +31,8 @@
 
   function parseName(fullName) {
     const parts = removeDiacritics(fullName).toLowerCase().trim().split(/\s+/);
-    const first  = parts[parts.length - 1]; // Tên (cuối)
-    const last   = parts[0];                // Họ (đầu)
+    const first  = parts[parts.length - 1];
+    const last   = parts[0];
     const middle = parts.length > 2 ? parts.slice(1, -1).join("") : "";
     return { first, last, middle, parts };
   }
@@ -40,7 +40,6 @@
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function randPad(n)   { return String(randInt(0,99)).padStart(n,"0"); }
   function randDDMM()   { const d=randInt(1,28),m=randInt(1,12); return String(d).padStart(2,"0")+String(m).padStart(2,"0"); }
-  function randYear()   { return String(randInt(90,05).toString().padStart(2,"0")); }
   function pickRand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
   function genNickOptions(fullName) {
@@ -51,8 +50,6 @@
     const r2 = randPad(2);
     const r4 = String(randInt(1000,9999));
     const yy = String(randInt(90,9)).padStart(2,"0");
-
-    // Tên đệm viết tắt
     const midInitials = parts.slice(1,-1).map(p=>p[0]).join("");
 
     return [
@@ -103,7 +100,6 @@
   }
 
   function getUsernameInput() {
-    // Ưu tiên data-input-name="account"
     const byData = document.querySelector('input[data-input-name="account"], input[data-input-name="username"]');
     if (byData) return byData;
     return findInputByKeywords(FIELD_KEYWORDS.username);
@@ -147,7 +143,6 @@
         listEl.appendChild(row);
       });
 
-      // Bind chọn
       listEl.querySelectorAll(".__nk_pick__").forEach(btn => {
         btn.addEventListener("click", () => {
           const idx = parseInt(btn.dataset.idx);
@@ -156,7 +151,6 @@
         });
       });
 
-      // Bind random từng dòng
       listEl.querySelectorAll(".__nk_rand__").forEach(btn => {
         btn.addEventListener("click", () => {
           const idx = parseInt(btn.dataset.idx);
@@ -353,16 +347,12 @@
   }
 
   function findPhoneInput() {
-    // 1. Tìm theo data attribute
     const direct = document.querySelector('input[data-input-name="phone"]');
     if (direct) return direct;
-    // 2. Tìm theo class mobile-input
     const byClass = document.querySelector('input.mobile-input, input[class*="mobile-input"], input[class*="phone-input"]');
     if (byClass) return byClass;
-    // 3. Tìm theo type=tel
     const tel = document.querySelector('input[type="tel"]');
     if (tel) return tel;
-    // 4. Tìm theo keyword trong các attribute
     const KW = /phone|mobile|sdt|sdт|điện thoại|dien thoai|số đt|nhập sđt|nhap sdt|nhập số|nhap so|số điện|so dien/i;
     const all = [...document.querySelectorAll('input[type="text"],input[type="number"],input[type="tel"]')];
     const byAttr = all.find(el =>
@@ -372,7 +362,6 @@
       KW.test(el.className||"")
     );
     if (byAttr) return byAttr;
-    // 5. Tìm theo label hoặc container
     for (const el of all) {
       if (el.id) {
         const lbl = document.querySelector(`label[for="${el.id}"]`);
@@ -387,15 +376,12 @@
   }
 
   function findOtpInput() {
-    // Ưu tiên data-input-name="phoneCode" hoặc "otp"
     const byData = document.querySelector('input[data-input-name="phoneCode"], input[data-input-name="otp"], input[data-input-name="sms"]');
     if (byData) return byData;
-    // Tìm theo placeholder "Nhập mã SMS" trước
     const bySms = [...document.querySelectorAll('input')].find(el =>
       /nhập mã sms|nhap ma sms/i.test(el.placeholder||"")
     );
     if (bySms) return bySms;
-    // Tìm chung nhưng loại trừ formcontrolname="checkCode"
     const KW = /otp|m[aã].? ?x[aá]c|verif|captcha|sms/i;
     return [...document.querySelectorAll('input[type="text"],input[type="number"],input[type="tel"]')]
       .find(el => {
@@ -501,13 +487,10 @@
   function doFillPhone(phone) {
     const phoneEl = findPhoneInput();
     if (!phoneEl) return;
-    // Thử fillInput nhanh
     fillInput(phoneEl, stripZero(phone));
     setTimeout(async () => {
-      // Nếu không vào (Angular/React) thì dùng typeIntoInput
       if (!phoneEl.value) await typeIntoInput(phoneEl, stripZero(phone));
       setTimeout(async () => {
-        // Vẫn trống thì thử số có đầu 0
         if (!phoneEl.value) await typeIntoInput(phoneEl, phone);
       }, 500);
     }, 300);
@@ -548,6 +531,132 @@
     const btn = document.getElementById("okvip-btn-otp");
     btn.textContent = "⏳ Đang chờ"; btn.style.background = "#6c757d";
     await pollOtp(sim, apiKey, btn);
+  }
+
+  // =====================================================
+  // ========== PHẦN 3: CAPTCHA SOLVER ==========
+  // =====================================================
+
+  const CAPTCHA_APIKEY = "7354dfda0562f14700d36f923868d5e7";
+  const CAPTCHA_API_URL = "https://anticaptcha.top/api/captcha";
+
+  async function getBase64(img) {
+    if (!img) return null;
+    if (img.src.startsWith("data:")) return img.src;
+    try {
+      const res = await fetch(img.src), blob = await res.blob();
+      return await new Promise(r => { const fr = new FileReader(); fr.onloadend = () => r(fr.result); fr.readAsDataURL(blob); });
+    } catch(e) {}
+    try {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth || 120; c.height = img.naturalHeight || 40;
+      c.getContext("2d").drawImage(img, 0, 0); return c.toDataURL("image/png");
+    } catch(e) {}
+    return null;
+  }
+
+  async function callCaptchaApi(base64, type) {
+    type = type || (base64.includes("svg+xml") ? 18 : 14);
+    const res = await fetch(CAPTCHA_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apikey: CAPTCHA_APIKEY, type, img: base64 })
+    });
+    const d = await res.json();
+    if (d.success && (d.captcha || d.result)) return d.captcha || d.result;
+    throw new Error(d.message || "API lỗi");
+  }
+
+  async function solveCaptchaAuto() {
+    const inp = document.querySelector('input[formcontrolname="checkCode"]')
+             || document.querySelector('input[ng-model*="code"]');
+    if (!inp) return { ok: false, msg: "Không tìm thấy input" };
+
+    await sleep(300);
+
+    let img = document.querySelector('img[src^="data:image"]')
+           || document.querySelector('img.codeImage')
+           || document.querySelector('img.catchat_pic')
+           || document.querySelector('#captcha-image')
+           || document.querySelector('img[src*="captcha"]')
+           || document.querySelector('img[src*="kaptcha"]')
+           || document.querySelector('img[src*="vcode"]');
+
+    if (!img) {
+      const parent = inp.closest('form') || inp.parentElement;
+      if (parent) img = parent.querySelector('img');
+    }
+    if (!img) {
+      img = Array.from(document.querySelectorAll("img")).find(e => {
+        const w = e.naturalWidth || e.offsetWidth, h = e.naturalHeight || e.offsetHeight;
+        return w > 50 && w < 280 && h > 20 && h < 100;
+      });
+    }
+
+    if (!img) return { ok: false, msg: "Không tìm thấy ảnh captcha" };
+
+    try {
+      const b64 = await getBase64(img);
+      if (!b64) return { ok: false, msg: "Không lấy được ảnh" };
+      const raw = b64.includes(",") ? b64.split(",")[1] : b64;
+      const type = b64.includes("svg+xml") ? 18 : 14;
+      const result = await callCaptchaApi(raw, type);
+      await typeIntoInput(inp, result);
+      return { ok: true, result };
+    } catch(e) {
+      return { ok: false, msg: e.message };
+    }
+  }
+
+  function injectCaptchaBtn() {
+    if (document.getElementById("__csp_btn__")) return;
+
+    const inp = document.querySelector('input[formcontrolname="checkCode"]')
+             || document.querySelector('input[ng-model*="code"]');
+    if (!inp) return;
+
+    const BTN = document.createElement("button");
+    BTN.id = "__csp_btn__";
+    BTN.type = "button";
+    BTN.textContent = "⚡ Tự động nhận diện";
+    BTN.style.cssText =
+      "all:unset;display:block;box-sizing:border-box;" +
+      "width:100%;margin-top:6px;padding:7px 0;" +
+      "background:rgba(0,200,100,0.15);border:1px solid rgba(0,200,100,0.5);" +
+      "border-radius:6px;color:#00aa55;font-size:13px;font-weight:bold;" +
+      "font-family:monospace;text-align:center;white-space:nowrap;cursor:pointer;" +
+      "transition:opacity .2s;";
+
+    BTN.addEventListener("click", async () => {
+      BTN.disabled = true;
+      BTN.textContent = "⏳ Đang giải…";
+      BTN.style.opacity = "0.6";
+
+      let result;
+      try { result = await solveCaptchaAuto(); }
+      catch(e) { result = { ok: false, msg: e.message }; }
+
+      if (result && result.ok) {
+        BTN.textContent = "✅ " + result.result;
+        BTN.style.color = "#00aa55";
+        setTimeout(() => {
+          BTN.textContent = "⚡ Tự động nhận diện";
+          BTN.style.opacity = "1";
+          BTN.disabled = false;
+        }, 3000);
+      } else {
+        BTN.textContent = "❌ " + (result && result.msg ? result.msg : "Lỗi");
+        BTN.style.color = "#ff4466";
+        setTimeout(() => {
+          BTN.textContent = "⚡ Tự động nhận diện";
+          BTN.style.color = "#00aa55";
+          BTN.style.opacity = "1";
+          BTN.disabled = false;
+        }, 3000);
+      }
+    });
+
+    inp.insertAdjacentElement("afterend", BTN);
   }
 
   // =====================================================
@@ -625,10 +734,8 @@
         lastSelectedAccount = account;
         btn.textContent = "⌨️..."; btn.disabled = true;
 
-        // 1. Điền Tên
         await typeIntoInput(getNameInput(), account.name);
 
-        // 2. Tự động Random Gmail và điền luôn
         await sleep(200);
         const emailEl2 = getEmailInput();
         if (emailEl2 && lastSelectedAccount) {
@@ -637,7 +744,6 @@
           await typeIntoInput(emailEl2, emailPick.value);
         }
 
-        // 3. Tự động Random TK và điền luôn
         await sleep(200);
         const userEl = getUsernameInput();
         if (userEl && lastSelectedAccount) {
@@ -646,7 +752,6 @@
           await typeIntoInput(userEl, pick.value);
           showToast("🎲 TK: " + pick.value, "info");
         } else {
-          // Fallback: thử tìm theo data-input-name="account" trực tiếp
           const fallbackEl = document.querySelector('input[data-input-name="account"]');
           if (fallbackEl && lastSelectedAccount) {
             const opts = genNickOptions(lastSelectedAccount.name);
@@ -659,12 +764,10 @@
           }
         }
 
-        // 3. Tự động click Điền SĐT
         await sleep(300);
         const sdtBtn = document.getElementById("okvip-btn-phone");
         if (sdtBtn) {
           sdtBtn.click();
-          // Chờ thuê SIM xong (tối đa 15s)
           await new Promise(resolve => {
             let waited = 0;
             const check = setInterval(() => {
@@ -676,7 +779,6 @@
           });
         }
 
-        // 3. Tự động click Điền MK
         await sleep(400);
         const mkBtn = document.getElementById("__mk_fill_btn__");
         if (mkBtn) {
@@ -720,7 +822,6 @@
         w.appendChild(userEl);
         userEl.style.paddingRight = "160px";
 
-        // Nút Điền TK
         const btnTK = document.createElement("button");
         btnTK.id = "__mk_user_btn__";
         btnTK.type = "button";
@@ -743,7 +844,6 @@
           });
         });
 
-        // Nút 🎲 Random
         const btnRand = document.createElement("button");
         btnRand.id = "__mk_user_rand__";
         btnRand.type = "button";
@@ -782,7 +882,6 @@
         w.appendChild(emailEl);
         emailEl.style.paddingRight = "160px";
 
-        // Nút Điền Gmail
         const btnGmail = document.createElement("button");
         btnGmail.id = "__mk_email_btn__";
         btnGmail.type = "button";
@@ -796,8 +895,6 @@
         btnGmail.addEventListener("mousedown", e => e.preventDefault());
         btnGmail.addEventListener("click", async () => {
           if (!lastSelectedAccount) { showToast("⚠️ Bấm Điền Tên trước!", "error"); return; }
-          const opts = genEmailOptions(lastSelectedAccount.name);
-          // Hiện picker
           const overlay = document.createElement("div");
           overlay.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;";
           const box = document.createElement("div");
@@ -857,7 +954,6 @@
           renderEM(curOpts);
         });
 
-        // Nút 🎲 Random Gmail
         const btnRandEM = document.createElement("button");
         btnRandEM.id = "__mk_email_rand__";
         btnRandEM.type = "button";
@@ -907,6 +1003,9 @@
 
     const otp = findOtpInput();
     if (otp) injectSimBtn(otp, "okvip-btn-otp", "📨 Lấy OTP", "#28a745", handleOtpClick);
+
+    // --- CAPTCHA BUTTON ---
+    injectCaptchaBtn();
   }
 
   tryInjectAll();
@@ -939,7 +1038,6 @@
   }).observe(document.body, { childList: true, subtree: true, characterData: true });
   setInterval(tryInjectAll, 1000);
 
-  // Toast khởi động
   showToast("✅ Tool đã sẵn sàng!", "success");
 
 })();
