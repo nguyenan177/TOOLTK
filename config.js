@@ -97,7 +97,7 @@
   }
 
   function getEmailInput() {
-    const byFC = document.querySelector('input[formcontrolname="email"]');
+    const byFC = document.querySelector('input[formcontrolname="email"], input[placeholder="Địa chỉ Email"], input[placeholder="Email"], input[placeholder="Nhập Email"], input[placeholder="Nhập email"]');
     if (byFC) return byFC;
     return findInputByKeywords(FIELD_KEYWORDS.email);
   }
@@ -774,7 +774,7 @@
     // --- EMAIL BUTTON ---
     if (!document.getElementById("__mk_email_btn__")) {
       const emailEl = getEmailInput();
-      if (emailEl && emailEl.parentNode?.id !== "__mk_email_wrapper__") {
+      if (emailEl && !emailEl.closest("#__mk_email_wrapper__")) {
         const w = document.createElement("div");
         w.id = "__mk_email_wrapper__";
         w.style.cssText = "position:relative;display:block;width:100%;";
