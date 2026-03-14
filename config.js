@@ -31,8 +31,8 @@
 
   function parseName(fullName) {
     const parts = removeDiacritics(fullName).toLowerCase().trim().split(/\s+/);
-    const first  = parts[parts.length - 1]; // Tên (cuối)
-    const last   = parts[0];                // Họ (đầu)
+    const first  = parts[parts.length - 1];
+    const last   = parts[0];
     const middle = parts.length > 2 ? parts.slice(1, -1).join("") : "";
     return { first, last, middle, parts };
   }
@@ -40,19 +40,15 @@
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function randPad(n)   { return String(randInt(0,99)).padStart(n,"0"); }
   function randDDMM()   { const d=randInt(1,28),m=randInt(1,12); return String(d).padStart(2,"0")+String(m).padStart(2,"0"); }
-  function randYear()   { return String(randInt(90,05).toString().padStart(2,"0")); }
   function pickRand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
   function genNickOptions(fullName) {
-    const { first, last, middle, parts } = parseName(fullName);
+    const { first, last, parts } = parseName(fullName);
     const pre = pickRand(NICK_PREFIXES);
     const suf = pickRand(NICK_SUFFIXES);
     const ddmm = randDDMM();
     const r2 = randPad(2);
     const r4 = String(randInt(1000,9999));
-    const yy = String(randInt(90,9)).padStart(2,"0");
-
-    // Tên đệm viết tắt
     const midInitials = parts.slice(1,-1).map(p=>p[0]).join("");
 
     return [
@@ -103,7 +99,6 @@
   }
 
   function getUsernameInput() {
-    // Ưu tiên data-input-name="account"
     const byData = document.querySelector('input[data-input-name="account"], input[data-input-name="username"]');
     if (byData) return byData;
     return findInputByKeywords(FIELD_KEYWORDS.username);
@@ -147,7 +142,6 @@
         listEl.appendChild(row);
       });
 
-      // Bind chọn
       listEl.querySelectorAll(".__nk_pick__").forEach(btn => {
         btn.addEventListener("click", () => {
           const idx = parseInt(btn.dataset.idx);
@@ -156,7 +150,6 @@
         });
       });
 
-      // Bind random từng dòng
       listEl.querySelectorAll(".__nk_rand__").forEach(btn => {
         btn.addEventListener("click", () => {
           const idx = parseInt(btn.dataset.idx);
@@ -352,6 +345,9 @@
     localStorage.setItem(API_KEY_STORE, DEFAULT_API_KEY);
   }
 
+  // ========== FIX: findPhoneInput loại trừ input STK ==========
+  const STK_EXCLUDE = /tài khoản ngân hàng|so tai khoan|số tài khoản|account number|bank account|stk/i;
+
   function findPhoneInput() {
     // 1. Tìm theo data attribute
     const direct = document.querySelector('input[data-input-name="phone"]');
@@ -362,18 +358,24 @@
     // 3. Tìm theo type=tel
     const tel = document.querySelector('input[type="tel"]');
     if (tel) return tel;
-    // 4. Tìm theo keyword trong các attribute
-    const KW = /phone|mobile|sdt|sdт|điện thoại|dien thoai|số đt|nhập sđt|nhap sdt|nhập số|nhap so|số điện|so dien/i;
+    // 4. Tìm theo keyword — loại trừ input STK
+    const KW = /phone|mobile|sdt|điện thoại|dien thoai|số đt|nhập sđt|nhap sdt|nhập số điện|nhap so dien|số điện|so dien/i;
     const all = [...document.querySelectorAll('input[type="text"],input[type="number"],input[type="tel"]')];
-    const byAttr = all.find(el =>
-      KW.test(el.placeholder||"") || KW.test(el.name||"") ||
-      KW.test(el.id||"") || KW.test(el.getAttribute("data-input-name")||"") ||
-      KW.test(el.getAttribute("aria-label")||"") ||
-      KW.test(el.className||"")
-    );
+    const byAttr = all.find(el => {
+      const combined = [
+        el.placeholder||"", el.name||"", el.id||"",
+        el.getAttribute("data-input-name")||"",
+        el.getAttribute("aria-label")||"",
+        el.className||""
+      ].join(" ");
+      if (STK_EXCLUDE.test(combined)) return false; // ❌ bỏ qua input STK
+      return KW.test(combined);
+    });
     if (byAttr) return byAttr;
-    // 5. Tìm theo label hoặc container
+    // 5. Tìm theo label hoặc container — loại trừ input STK
     for (const el of all) {
+      const attrCombined = [el.placeholder||"", el.name||"", el.id||""].join(" ");
+      if (STK_EXCLUDE.test(attrCombined)) continue; // ❌ bỏ qua input STK
       if (el.id) {
         const lbl = document.querySelector(`label[for="${el.id}"]`);
         if (lbl && KW.test(lbl.textContent||"")) return el;
@@ -387,15 +389,12 @@
   }
 
   function findOtpInput() {
-    // Ưu tiên data-input-name="phoneCode" hoặc "otp"
     const byData = document.querySelector('input[data-input-name="phoneCode"], input[data-input-name="otp"], input[data-input-name="sms"]');
     if (byData) return byData;
-    // Tìm theo placeholder "Nhập mã SMS" trước
     const bySms = [...document.querySelectorAll('input')].find(el =>
       /nhập mã sms|nhap ma sms/i.test(el.placeholder||"")
     );
     if (bySms) return bySms;
-    // Tìm chung nhưng loại trừ formcontrolname="checkCode"
     const KW = /otp|m[aã].? ?x[aá]c|verif|captcha|sms/i;
     return [...document.querySelectorAll('input[type="text"],input[type="number"],input[type="tel"]')]
       .find(el => {
@@ -501,13 +500,10 @@
   function doFillPhone(phone) {
     const phoneEl = findPhoneInput();
     if (!phoneEl) return;
-    // Thử fillInput nhanh
     fillInput(phoneEl, stripZero(phone));
     setTimeout(async () => {
-      // Nếu không vào (Angular/React) thì dùng typeIntoInput
       if (!phoneEl.value) await typeIntoInput(phoneEl, stripZero(phone));
       setTimeout(async () => {
-        // Vẫn trống thì thử số có đầu 0
         if (!phoneEl.value) await typeIntoInput(phoneEl, phone);
       }, 500);
     }, 300);
@@ -628,7 +624,7 @@
         // 1. Điền Tên
         await typeIntoInput(getNameInput(), account.name);
 
-        // 2. Tự động Random Gmail và điền luôn
+        // 2. Tự động Random Gmail và điền
         await sleep(200);
         const emailEl2 = getEmailInput();
         if (emailEl2 && lastSelectedAccount) {
@@ -637,7 +633,7 @@
           await typeIntoInput(emailEl2, emailPick.value);
         }
 
-        // 3. Tự động Random TK và điền luôn
+        // 3. Tự động Random TK và điền
         await sleep(200);
         const userEl = getUsernameInput();
         if (userEl && lastSelectedAccount) {
@@ -646,7 +642,6 @@
           await typeIntoInput(userEl, pick.value);
           showToast("🎲 TK: " + pick.value, "info");
         } else {
-          // Fallback: thử tìm theo data-input-name="account" trực tiếp
           const fallbackEl = document.querySelector('input[data-input-name="account"]');
           if (fallbackEl && lastSelectedAccount) {
             const opts = genNickOptions(lastSelectedAccount.name);
@@ -659,12 +654,11 @@
           }
         }
 
-        // 3. Tự động click Điền SĐT
+        // 4. Tự động click Điền SĐT
         await sleep(300);
         const sdtBtn = document.getElementById("okvip-btn-phone");
         if (sdtBtn) {
           sdtBtn.click();
-          // Chờ thuê SIM xong (tối đa 15s)
           await new Promise(resolve => {
             let waited = 0;
             const check = setInterval(() => {
@@ -676,7 +670,7 @@
           });
         }
 
-        // 3. Tự động click Điền MK
+        // 5. Tự động click Điền MK
         await sleep(400);
         const mkBtn = document.getElementById("__mk_fill_btn__");
         if (mkBtn) {
@@ -720,7 +714,6 @@
         w.appendChild(userEl);
         userEl.style.paddingRight = "160px";
 
-        // Nút Điền TK
         const btnTK = document.createElement("button");
         btnTK.id = "__mk_user_btn__";
         btnTK.type = "button";
@@ -743,7 +736,6 @@
           });
         });
 
-        // Nút 🎲 Random
         const btnRand = document.createElement("button");
         btnRand.id = "__mk_user_rand__";
         btnRand.type = "button";
@@ -782,7 +774,6 @@
         w.appendChild(emailEl);
         emailEl.style.paddingRight = "160px";
 
-        // Nút Điền Gmail
         const btnGmail = document.createElement("button");
         btnGmail.id = "__mk_email_btn__";
         btnGmail.type = "button";
@@ -796,8 +787,6 @@
         btnGmail.addEventListener("mousedown", e => e.preventDefault());
         btnGmail.addEventListener("click", async () => {
           if (!lastSelectedAccount) { showToast("⚠️ Bấm Điền Tên trước!", "error"); return; }
-          const opts = genEmailOptions(lastSelectedAccount.name);
-          // Hiện picker
           const overlay = document.createElement("div");
           overlay.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;";
           const box = document.createElement("div");
@@ -857,7 +846,6 @@
           renderEM(curOpts);
         });
 
-        // Nút 🎲 Random Gmail
         const btnRandEM = document.createElement("button");
         btnRandEM.id = "__mk_email_rand__";
         btnRandEM.type = "button";
@@ -939,7 +927,6 @@
   }).observe(document.body, { childList: true, subtree: true, characterData: true });
   setInterval(tryInjectAll, 1000);
 
-  // Toast khởi động
   showToast("✅ Tool đã sẵn sàng!", "success");
 
 })();
