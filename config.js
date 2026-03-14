@@ -6,7 +6,7 @@
   // ========== PHẦN 1: BANK TOOL (Firebase) ==========
   // =====================================================
 
-  const PASSWORD = "XXZC345";
+  const PASSWORD = "Minhanhs1";
 
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyAX7fGf0f0gj6AVcwLC6To-Zpv0tgR0UI4",
@@ -201,13 +201,27 @@
     if (direct) return direct;
     const tel = document.querySelector('input[type="tel"]');
     if (tel) return tel;
-    const KW = /phone|mobile|sdt|sdт/i;
-    return [...document.querySelectorAll('input[type="text"],input[type="number"]')]
-      .find(el =>
-        KW.test(el.placeholder||"") || KW.test(el.name||"") ||
-        KW.test(el.id||"") || KW.test(el.getAttribute("data-input-name")||"") ||
-        KW.test(el.getAttribute("aria-label")||"")
-      ) || null;
+    const KW = /phone|mobile|sdt|sdт|điện thoại|dien thoai|số đt/i;
+    const all = [...document.querySelectorAll('input[type="text"],input[type="number"],input[type="tel"]')];
+    const byAttr = all.find(el =>
+      KW.test(el.placeholder||"") || KW.test(el.name||"") ||
+      KW.test(el.id||"") || KW.test(el.getAttribute("data-input-name")||"") ||
+      KW.test(el.getAttribute("aria-label")||"")
+    );
+    if (byAttr) return byAttr;
+    // Tìm theo label liên kết
+    for (const el of all) {
+      if (el.id) {
+        const lbl = document.querySelector(`label[for="${el.id}"]`);
+        if (lbl && KW.test(lbl.textContent||"")) return el;
+      }
+      const parentLbl = el.closest("label");
+      if (parentLbl && KW.test(parentLbl.textContent||"")) return el;
+      // Tìm text gần nhất trong parent container
+      const container = el.closest("div,li,td,tr,section");
+      if (container && KW.test(container.textContent||"")) return el;
+    }
+    return null;
   }
 
   function findOtpInput() {
