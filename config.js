@@ -201,7 +201,7 @@
     if (direct) return direct;
     const tel = document.querySelector('input[type="tel"]');
     if (tel) return tel;
-    const KW = /phone|mobile|sdt|sdт|điện thoại|dien thoai|số đt/i;
+    const KW = /phone|mobile|sdt|sdт|điện thoại|dien thoai|số đt|nhập sđt|nhap sdt|nhập số|nhap so|số điện|so dien/i;
     const all = [...document.querySelectorAll('input[type="text"],input[type="number"],input[type="tel"]')];
     const byAttr = all.find(el =>
       KW.test(el.placeholder||"") || KW.test(el.name||"") ||
