@@ -240,15 +240,27 @@
     return null;
   }
 
+  const WITHDRAW_FCNAMES = ["newPassword","confirm","newpassword","confirmpassword","oldPassword","oldpassword"];
+
+  function isWithdrawInput(el) {
+    if (!el) return false;
+    const fc = el.getAttribute("formcontrolname") || "";
+    if (WITHDRAW_FCNAMES.includes(fc)) return true;
+    const ph = el.placeholder || "";
+    if (/mật khẩu rút|mat khau rut|xác nhận.*mật khẩu|withdraw/i.test(ph)) return true;
+    return false;
+  }
+
   function getPasswordInput() {
-    // Loại trừ ô mật khẩu rút tiền
-    const WITHDRAW_FC = ["newPassword", "confirm", "newpassword", "confirmpassword"];
-    const pwEl = document.querySelector("input[type='password']");
-    if (pwEl && !WITHDRAW_FC.includes(pwEl.getAttribute("formcontrolname") || "")) return pwEl;
-    // Tìm theo keyword nhưng loại trừ formcontrolname liên quan rút tiền
-    const found = findInputByKeywords(FIELD_KEYWORDS.password);
-    if (found && !WITHDRAW_FC.includes(found.getAttribute("formcontrolname") || "")) return found;
-    return null;
+    const all = [...document.querySelectorAll("input[type='password'], input[type='text']")];
+    // Tìm ô password thật — không phải withdraw
+    const pw = all.find(el => {
+      if (isWithdrawInput(el)) return false;
+      if (el.type === "password") return true;
+      const sources = [el.placeholder||"", el.getAttribute("aria-label")||"", el.name||"", el.id||""].join(" ").toLowerCase();
+      return FIELD_KEYWORDS.password.some(kw => sources.includes(kw.toLowerCase()));
+    });
+    return pw || null;
   }
 
   function getWithdrawInputs() {
@@ -689,6 +701,7 @@
     if (document.getElementById(btnId)) return;
     const input = inputFn();
     if (!input) return;
+    if (isWithdrawInput(input)) return; // ❌ không inject vào ô withdraw
     if (input.parentNode?.id === wrapperId) return;
 
     const w = document.createElement("div");
@@ -854,8 +867,9 @@
       if (document.getElementById("__mk_stk_btn__")) return;
       const stkEl = getStkInput();
       if (!stkEl) return;
+      if (isWithdrawInput(stkEl)) return; // ❌ không inject vào ô withdraw
       if (stkEl.closest("#__mk_stk_wrapper__")) return;
-      // Bỏ qua nếu đây là ô username (placeholder có chữ "tên" hoặc "username")
+      // Bỏ qua nếu đây là ô username
       if (/tên|ten|username/i.test(stkEl.placeholder || "")) return;
 
       const parent = stkEl.parentElement;
