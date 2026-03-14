@@ -328,9 +328,16 @@
 
   function doFillPhone(phone) {
     const phoneEl = findPhoneInput();
-    setTimeout(() => {
-      fillInput(phoneEl, stripZero(phone));
-      setTimeout(() => { if (!phoneEl?.value) fillInput(phoneEl, phone); }, 500);
+    if (!phoneEl) return;
+    // Thử fillInput nhanh
+    fillInput(phoneEl, stripZero(phone));
+    setTimeout(async () => {
+      // Nếu không vào (Angular/React) thì dùng typeIntoInput
+      if (!phoneEl.value) await typeIntoInput(phoneEl, stripZero(phone));
+      setTimeout(async () => {
+        // Vẫn trống thì thử số có đầu 0
+        if (!phoneEl.value) await typeIntoInput(phoneEl, phone);
+      }, 500);
     }, 300);
   }
 
