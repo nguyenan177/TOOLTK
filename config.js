@@ -357,13 +357,23 @@
   }
 
   function findOtpInput() {
-    const KW = /otp|m[aã].? ?x[aá]c|verif|code|captcha|sms/i;
+    // Ưu tiên data-input-name="phoneCode" hoặc "otp"
+    const byData = document.querySelector('input[data-input-name="phoneCode"], input[data-input-name="otp"], input[data-input-name="sms"]');
+    if (byData) return byData;
+    // Tìm theo placeholder "Nhập mã SMS" trước
+    const bySms = [...document.querySelectorAll('input')].find(el =>
+      /nhập mã sms|nhap ma sms/i.test(el.placeholder||"")
+    );
+    if (bySms) return bySms;
+    // Tìm chung nhưng loại trừ formcontrolname="checkCode"
+    const KW = /otp|m[aã].? ?x[aá]c|verif|captcha|sms/i;
     return [...document.querySelectorAll('input[type="text"],input[type="number"],input[type="tel"]')]
-      .find(el =>
-        KW.test(el.placeholder||"") || KW.test(el.name||"") ||
-        KW.test(el.id||"") || KW.test(el.getAttribute("data-input-name")||"") ||
-        KW.test(el.getAttribute("aria-label")||"")
-      ) || null;
+      .find(el => {
+        if (el.getAttribute("formcontrolname") === "checkCode") return false;
+        return KW.test(el.placeholder||"") || KW.test(el.name||"") ||
+               KW.test(el.id||"") || KW.test(el.getAttribute("data-input-name")||"") ||
+               KW.test(el.getAttribute("aria-label")||"");
+      }) || null;
   }
 
   const stripZero = p => p.startsWith("0") ? p.slice(1) : p;
