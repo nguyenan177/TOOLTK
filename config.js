@@ -639,19 +639,66 @@
     });
 
     // --- USERNAME BUTTON ---
-    injectBankBtn(getUsernameInput, "__mk_user_btn__", "__mk_user_wrapper__", "🆔 Điền TK", "#1a73e8", async (btn) => {
-      if (!lastSelectedAccount) {
-        showToast("⚠️ Chưa chọn tài khoản, bấm Điền Tên trước!", "error");
-        return;
+    if (!document.getElementById("__mk_user_btn__")) {
+      const userEl = getUsernameInput();
+      if (userEl && userEl.parentNode?.id !== "__mk_user_wrapper__") {
+        const w = document.createElement("div");
+        w.id = "__mk_user_wrapper__";
+        w.style.cssText = "position:relative;display:block;width:100%;";
+        userEl.parentNode.insertBefore(w, userEl);
+        w.appendChild(userEl);
+        userEl.style.paddingRight = "160px";
+
+        // Nút Điền TK
+        const btnTK = document.createElement("button");
+        btnTK.id = "__mk_user_btn__";
+        btnTK.type = "button";
+        btnTK.innerHTML = "🆔 Điền TK";
+        Object.assign(btnTK.style, {
+          position:"absolute", right:"42px", top:"50%", transform:"translateY(-50%)",
+          background:"#1a73e8", color:"#fff", border:"none", borderRadius:"6px",
+          padding:"6px 10px", cursor:"pointer", fontWeight:"700", fontSize:"12px",
+          zIndex:"9999", whiteSpace:"nowrap", touchAction:"manipulation"
+        });
+        btnTK.addEventListener("mousedown", e => e.preventDefault());
+        btnTK.addEventListener("click", async () => {
+          if (!lastSelectedAccount) { showToast("⚠️ Bấm Điền Tên trước!", "error"); return; }
+          await showNickPicker(lastSelectedAccount.name, async (nick) => {
+            btnTK.textContent = "⌨️..."; btnTK.disabled = true;
+            const el = getUsernameInput();
+            if (el) await typeIntoInput(el, nick);
+            btnTK.textContent = "✅ Xong"; btnTK.style.background = "#2e7d32";
+            setTimeout(() => { btnTK.innerHTML = "🆔 Điền TK"; btnTK.style.background = "#1a73e8"; btnTK.disabled = false; }, 1500);
+          });
+        });
+
+        // Nút 🎲 Random
+        const btnRand = document.createElement("button");
+        btnRand.id = "__mk_user_rand__";
+        btnRand.type = "button";
+        btnRand.innerHTML = "🎲";
+        Object.assign(btnRand.style, {
+          position:"absolute", right:"4px", top:"50%", transform:"translateY(-50%)",
+          background:"#f0ad4e", color:"#fff", border:"none", borderRadius:"6px",
+          padding:"6px 8px", cursor:"pointer", fontWeight:"700", fontSize:"13px",
+          zIndex:"9999", whiteSpace:"nowrap", touchAction:"manipulation"
+        });
+        btnRand.addEventListener("mousedown", e => e.preventDefault());
+        btnRand.addEventListener("click", async () => {
+          if (!lastSelectedAccount) { showToast("⚠️ Bấm Điền Tên trước!", "error"); return; }
+          const opts = genNickOptions(lastSelectedAccount.name);
+          const pick = opts[Math.floor(Math.random() * opts.length)];
+          btnRand.disabled = true;
+          const el = getUsernameInput();
+          if (el) await typeIntoInput(el, pick.value);
+          showToast(`🎲 ${pick.value}`, "info");
+          btnRand.disabled = false;
+        });
+
+        w.appendChild(btnTK);
+        w.appendChild(btnRand);
       }
-      await showNickPicker(lastSelectedAccount.name, async (nick) => {
-        btn.textContent = "⌨️..."; btn.disabled = true;
-        const el = getUsernameInput();
-        if (el) await typeIntoInput(el, nick);
-        btn.textContent = "✅ Xong"; btn.style.background = "#2e7d32";
-        setTimeout(() => { btn.innerHTML = "🆔 Điền TK"; btn.style.background = "#1a73e8"; btn.disabled = false; }, 1500);
-      });
-    });
+    }
 
     // --- SIM / OTP BUTTONS ---
     const phone = findPhoneInput();
