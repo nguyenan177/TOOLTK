@@ -598,7 +598,12 @@
         // 1. Điền Tên
         await typeIntoInput(getNameInput(), account.name);
 
-        // 2. Tự động click Điền SĐT
+        // 2. Tự động Random TK
+        await sleep(200);
+        const randBtn = document.getElementById('__mk_user_rand__');
+        if (randBtn) randBtn.click();
+
+        // 3. Tự động click Điền SĐT
         await sleep(300);
         const sdtBtn = document.getElementById("okvip-btn-phone");
         if (sdtBtn) {
