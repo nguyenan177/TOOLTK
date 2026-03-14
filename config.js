@@ -6,7 +6,7 @@
   // ========== PHẦN 1: BANK TOOL (Firebase) ==========
   // =====================================================
 
-  const PASSWORD = "Minhanhs1";
+  const PASSWORD = "XXZC345";
 
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyAX7fGf0f0gj6AVcwLC6To-Zpv0tgR0UI4",
@@ -446,7 +446,7 @@
             const check = setInterval(() => {
               waited += 500;
               const txt = document.getElementById("okvip-btn-phone")?.textContent || "";
-              const done = txt.includes("✅") || txt.includes("❌") || txt.includes("Hết") || waited >= 1500;
+              const done = txt.includes("✅") || txt.includes("❌") || txt.includes("Hết") || waited >= 1000;
               if (done) { clearInterval(check); resolve(); }
             }, 500);
           });
