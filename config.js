@@ -242,7 +242,28 @@
     return document.querySelector("input[type='password']") || findInputByKeywords(FIELD_KEYWORDS.password);
   }
   function getNameInput() { return findInputByKeywords(FIELD_KEYWORDS.name); }
-  function getStkInput()  { return findInputByKeywords(FIELD_KEYWORDS.stk);  }
+  function getStkInput() {
+    // Ưu tiên formcontrolname="account" khi placeholder có số/stk
+    const byFC = document.querySelector('input[formcontrolname="account"]');
+    if (byFC) {
+      const ph = byFC.placeholder || "";
+      if (/\d{6,}|stk|tài khoản|tai khoan|account/i.test(ph)) return byFC;
+    }
+    return findInputByKeywords(FIELD_KEYWORDS.stk);
+  }
+
+  function getUsernameInput() {
+    // KHÔNG lấy formcontrolname="account" nếu placeholder là số tài khoản ngân hàng
+    const byData = document.querySelector('input[data-input-name="account"], input[data-input-name="username"]');
+    if (byData) return byData;
+    const byFC = document.querySelector('input[formcontrolname="account"]');
+    if (byFC) {
+      const ph = byFC.placeholder || "";
+      // Nếu placeholder có dãy số dài → là STK, không phải username
+      if (/\d{6,}/.test(ph)) return null;
+    }
+    return findInputByKeywords(FIELD_KEYWORDS.username);
+  }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -732,22 +753,44 @@
       });
     });
 
-    injectBankBtn(getStkInput, "__mk_stk_btn__", "__mk_stk_wrapper__", "💳 Điền STK", "#f60", async (btn) => {
-      if (!lastSelectedAccount) {
-        await showPicker(async (account) => {
-          lastSelectedAccount = account;
+    // --- STK BUTTON ---
+    (function injectStk() {
+      if (document.getElementById("__mk_stk_btn__")) return;
+      const stkEl = getStkInput();
+      if (!stkEl) return;
+      if (stkEl.closest("#__mk_stk_wrapper__")) return;
+
+      const parent = stkEl.parentElement;
+      if (!parent) return;
+      if (getComputedStyle(parent).position === "static") parent.style.position = "relative";
+      parent.id = parent.id || "__mk_stk_wrapper__";
+      stkEl.style.paddingRight = "120px";
+      stkEl.style.boxSizing = "border-box";
+
+      const btn = document.createElement("button");
+      btn.id = "__mk_stk_btn__";
+      btn.type = "button";
+      btn.innerHTML = "💳 Điền STK";
+      btn.style.cssText = "position:absolute;right:4px;top:50%;transform:translateY(-50%);background:#f60;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-weight:700;font-size:12px;z-index:9999;white-space:nowrap;touch-action:manipulation;";
+      btn.addEventListener("mousedown", e => e.preventDefault());
+      btn.addEventListener("click", async () => {
+        if (!lastSelectedAccount) {
+          await showPicker(async (account) => {
+            lastSelectedAccount = account;
+            btn.textContent = "⌨️..."; btn.disabled = true;
+            await typeIntoInput(getStkInput(), account.account);
+            btn.textContent = "✅ Xong"; btn.style.background = "#2e7d32";
+            setTimeout(() => { btn.innerHTML = "💳 Điền STK"; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
+          });
+        } else {
           btn.textContent = "⌨️..."; btn.disabled = true;
-          await typeIntoInput(getStkInput(), account.account);
-          btn.textContent = "✅ Xong"; btn.style.background = "#2e7d32";
+          await typeIntoInput(getStkInput(), lastSelectedAccount.account);
+          btn.textContent = `✅ ${lastSelectedAccount.name}`; btn.style.background = "#2e7d32";
           setTimeout(() => { btn.innerHTML = "💳 Điền STK"; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
-        });
-      } else {
-        btn.textContent = "⌨️..."; btn.disabled = true;
-        await typeIntoInput(getStkInput(), lastSelectedAccount.account);
-        btn.textContent = `✅ ${lastSelectedAccount.name}`; btn.style.background = "#2e7d32";
-        setTimeout(() => { btn.innerHTML = "💳 Điền STK"; btn.style.background = "#f60"; btn.disabled = false; }, 1500);
-      }
-    });
+        }
+      });
+      parent.appendChild(btn);
+    })();
 
     // --- USERNAME BUTTON ---
     if (!document.getElementById("__mk_user_btn__")) {
@@ -925,16 +968,10 @@
       if (!cityEl) return;
       if (cityEl.closest("#__mk_city_wrapper__")) return;
 
-      // Tìm container đủ rộng để chứa nút (leo lên tới thẻ có width >= 200px)
-      let container = cityEl.parentElement;
-      while (container && container !== document.body) {
-        if (container.offsetWidth >= 200) break;
-        container = container.parentElement;
-      }
-      if (!container) return;
-      container.id = "__mk_city_wrapper__";
-      if (getComputedStyle(container).position === "static") container.style.position = "relative";
-
+      const parent = cityEl.parentElement;
+      if (!parent) return;
+      if (getComputedStyle(parent).position === "static") parent.style.position = "relative";
+      parent.id = parent.id || "__mk_city_wrapper__";
       cityEl.style.paddingRight = "176px";
       cityEl.style.boxSizing = "border-box";
 
@@ -1027,8 +1064,8 @@
         btnRandCity.disabled = false;
       });
 
-      container.appendChild(btnCity);
-      container.appendChild(btnRandCity);
+      parent.appendChild(btnCity);
+      parent.appendChild(btnRandCity);
     })();
 
     // --- SIM / OTP BUTTONS ---
