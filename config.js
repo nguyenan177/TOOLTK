@@ -923,21 +923,20 @@
       if (document.getElementById("__mk_city_btn__")) return;
       const cityEl = getCityInput();
       if (!cityEl) return;
-
       if (cityEl.closest("#__mk_city_wrapper__")) return;
 
-      // Bọc wrapper giống injectBankBtn
-      const parent = cityEl.parentElement;
-      if (!parent) return;
+      // Tìm container đủ rộng để chứa nút (leo lên tới thẻ có width >= 200px)
+      let container = cityEl.parentElement;
+      while (container && container !== document.body) {
+        if (container.offsetWidth >= 200) break;
+        container = container.parentElement;
+      }
+      if (!container) return;
+      container.id = "__mk_city_wrapper__";
+      if (getComputedStyle(container).position === "static") container.style.position = "relative";
 
-      const w = document.createElement("div");
-      w.id = "__mk_city_wrapper__";
-      w.style.cssText = "position:relative;display:block;width:100%;";
-      parent.insertBefore(w, cityEl);
-      w.appendChild(cityEl);
-      cityEl.style.paddingRight = "170px";
+      cityEl.style.paddingRight = "176px";
       cityEl.style.boxSizing = "border-box";
-      cityEl.style.width = "100%";
 
       function openCityPicker() {
         const overlay = document.createElement("div");
@@ -1008,7 +1007,7 @@
       btnCity.id = "__mk_city_btn__";
       btnCity.type = "button";
       btnCity.innerHTML = "🏙️ Tỉnh/TP";
-      btnCity.style.cssText = "position:absolute;right:42px;top:50%;transform:translateY(-50%);background:#6f42c1;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-weight:700;font-size:12px;z-index:9999;white-space:nowrap;touch-action:manipulation;";
+      btnCity.style.cssText = "position:absolute;right:38px;top:50%;transform:translateY(-50%);background:#6f42c1;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;font-weight:700;font-size:11px;z-index:9999;white-space:nowrap;touch-action:manipulation;max-width:90px;";
       btnCity.addEventListener("mousedown", e => e.preventDefault());
       btnCity.addEventListener("click", openCityPicker);
 
@@ -1017,7 +1016,7 @@
       btnRandCity.id = "__mk_city_rand__";
       btnRandCity.type = "button";
       btnRandCity.innerHTML = "🎲";
-      btnRandCity.style.cssText = "position:absolute;right:4px;top:50%;transform:translateY(-50%);background:#f0ad4e;color:#fff;border:none;border-radius:6px;padding:6px 8px;cursor:pointer;font-weight:700;font-size:13px;z-index:9999;white-space:nowrap;touch-action:manipulation;";
+      btnRandCity.style.cssText = "position:absolute;right:4px;top:50%;transform:translateY(-50%);background:#f0ad4e;color:#fff;border:none;border-radius:6px;padding:5px 7px;cursor:pointer;font-weight:700;font-size:13px;z-index:9999;white-space:nowrap;touch-action:manipulation;";
       btnRandCity.addEventListener("mousedown", e => e.preventDefault());
       btnRandCity.addEventListener("click", async () => {
         const pick = pickRand(PROVINCES_63);
@@ -1028,8 +1027,8 @@
         btnRandCity.disabled = false;
       });
 
-      w.appendChild(btnCity);
-      w.appendChild(btnRandCity);
+      container.appendChild(btnCity);
+      container.appendChild(btnRandCity);
     })();
 
     // --- SIM / OTP BUTTONS ---
