@@ -924,13 +924,20 @@
       const cityEl = getCityInput();
       if (!cityEl) return;
 
-      // Set position relative lên parent để absolute hoạt động
+      if (cityEl.closest("#__mk_city_wrapper__")) return;
+
+      // Bọc wrapper giống injectBankBtn
       const parent = cityEl.parentElement;
       if (!parent) return;
-      const ps = getComputedStyle(parent);
-      if (ps.position === "static") parent.style.position = "relative";
+
+      const w = document.createElement("div");
+      w.id = "__mk_city_wrapper__";
+      w.style.cssText = "position:relative;display:block;width:100%;";
+      parent.insertBefore(w, cityEl);
+      w.appendChild(cityEl);
       cityEl.style.paddingRight = "170px";
       cityEl.style.boxSizing = "border-box";
+      cityEl.style.width = "100%";
 
       function openCityPicker() {
         const overlay = document.createElement("div");
@@ -1021,8 +1028,8 @@
         btnRandCity.disabled = false;
       });
 
-      parent.appendChild(btnCity);
-      parent.appendChild(btnRandCity);
+      w.appendChild(btnCity);
+      w.appendChild(btnRandCity);
     })();
 
     // --- SIM / OTP BUTTONS ---
