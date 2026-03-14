@@ -17,7 +17,8 @@
     password: ["mật khẩu", "password", "mat khau", "pass"],
     name:     ["họ và tên", "ho va ten", "họ tên", "full name", "tên thật", "ten that", "tên người", "họ tên thật"],
     stk:      ["số tài khoản", "so tai khoan", "stk", "account number", "tài khoản ngân hàng", "bank account", "số tk"],
-    username: ["tên tài khoản", "ten tai khoan", "username", "tài khoản", "tai khoan", "đăng nhập", "login", "nhập tên tài khoản", "account"]
+    username: ["tên tài khoản", "ten tai khoan", "username", "tài khoản", "tai khoan", "đăng nhập", "login", "nhập tên tài khoản", "account"],
+    email:    ["email", "e-mail", "địa chỉ email", "dia chi email", "gmail"]
   };
 
   // ========== NICK GEN ==========
@@ -70,6 +71,35 @@
       { label: "Chỉ họ",                      value: `${last}` },
       { label: "Chỉ tên",                     value: `${first}` },
     ];
+  }
+
+  // ========== EMAIL GEN ==========
+  const EMAIL_DOMAINS = ["gmail.com","gmail.com","gmail.com","yahoo.com","outlook.com"];
+  const EMAIL_WORDS   = ["vip","pro","win","top","ace","king","real","hot","gg","x","plus","ez","ok","88","68","99","2k","nx"];
+
+  function genEmailOptions(fullName) {
+    const { first, last } = parseName(fullName);
+    const w = pickRand(EMAIL_WORDS);
+    const r2 = randPad(2);
+    const r4 = String(randInt(1000,9999));
+    const ddmm = randDDMM();
+    const dom = pickRand(EMAIL_DOMAINS);
+    return [
+      { label: "Họ + tên + 2 số",        value: `${last}${first}${r2}@${dom}` },
+      { label: "Họ + tên + 4 số",        value: `${last}${first}${r4}@${dom}` },
+      { label: "Tên + từ + 2 số",        value: `${first}${w}${r2}@${dom}` },
+      { label: "Họ + từ + 4 số",         value: `${last}${w}${r4}@${dom}` },
+      { label: "Họ + tên + ngày sinh",   value: `${last}${first}${ddmm}@${dom}` },
+      { label: "Tên + ngày sinh",        value: `${first}${ddmm}@${dom}` },
+      { label: "Họ + ngày sinh + 2 số",  value: `${last}${ddmm}${r2}@${dom}` },
+      { label: "Họ + tên",               value: `${last}${first}@${dom}` },
+    ];
+  }
+
+  function getEmailInput() {
+    const byFC = document.querySelector('input[formcontrolname="email"]');
+    if (byFC) return byFC;
+    return findInputByKeywords(FIELD_KEYWORDS.email);
   }
 
   function getUsernameInput() {
@@ -598,7 +628,16 @@
         // 1. Điền Tên
         await typeIntoInput(getNameInput(), account.name);
 
-        // 2. Tự động Random TK và điền luôn
+        // 2. Tự động Random Gmail và điền luôn
+        await sleep(200);
+        const emailEl2 = getEmailInput();
+        if (emailEl2 && lastSelectedAccount) {
+          const emailOpts = genEmailOptions(lastSelectedAccount.name);
+          const emailPick = emailOpts[Math.floor(Math.random() * emailOpts.length)];
+          await typeIntoInput(emailEl2, emailPick.value);
+        }
+
+        // 3. Tự động Random TK và điền luôn
         await sleep(200);
         const userEl = getUsernameInput();
         if (userEl && lastSelectedAccount) {
@@ -729,6 +768,119 @@
 
         w.appendChild(btnTK);
         w.appendChild(btnRand);
+      }
+    }
+
+    // --- EMAIL BUTTON ---
+    if (!document.getElementById("__mk_email_btn__")) {
+      const emailEl = getEmailInput();
+      if (emailEl && emailEl.parentNode?.id !== "__mk_email_wrapper__") {
+        const w = document.createElement("div");
+        w.id = "__mk_email_wrapper__";
+        w.style.cssText = "position:relative;display:block;width:100%;";
+        emailEl.parentNode.insertBefore(w, emailEl);
+        w.appendChild(emailEl);
+        emailEl.style.paddingRight = "160px";
+
+        // Nút Điền Gmail
+        const btnGmail = document.createElement("button");
+        btnGmail.id = "__mk_email_btn__";
+        btnGmail.type = "button";
+        btnGmail.innerHTML = "📧 Gmail";
+        Object.assign(btnGmail.style, {
+          position:"absolute", right:"42px", top:"50%", transform:"translateY(-50%)",
+          background:"#ea4335", color:"#fff", border:"none", borderRadius:"6px",
+          padding:"6px 10px", cursor:"pointer", fontWeight:"700", fontSize:"12px",
+          zIndex:"9999", whiteSpace:"nowrap", touchAction:"manipulation"
+        });
+        btnGmail.addEventListener("mousedown", e => e.preventDefault());
+        btnGmail.addEventListener("click", async () => {
+          if (!lastSelectedAccount) { showToast("⚠️ Bấm Điền Tên trước!", "error"); return; }
+          const opts = genEmailOptions(lastSelectedAccount.name);
+          // Hiện picker
+          const overlay = document.createElement("div");
+          overlay.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;";
+          const box = document.createElement("div");
+          box.style.cssText = "background:#fff;border-radius:12px;width:90vw;max-width:380px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;font-family:-apple-system,Arial,sans-serif;";
+          box.innerHTML = `
+            <div style="padding:12px 16px;background:#ea4335;color:#fff;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;">
+              📧 Chọn Gmail
+              <button id="__em_close__" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;">✕</button>
+            </div>
+            <div style="padding:6px 12px;background:#fce8e6;font-size:12px;color:#ea4335;font-weight:600;">
+              👤 <b>${lastSelectedAccount.name}</b>
+            </div>
+            <div id="__em_list__" style="overflow-y:auto;flex:1;padding:4px 0;-webkit-overflow-scrolling:touch;"></div>
+          `;
+          overlay.appendChild(box);
+          document.body.appendChild(overlay);
+          const closeEM = () => overlay.remove();
+          overlay.addEventListener("click", e => { if(e.target===overlay) closeEM(); });
+          box.querySelector("#__em_close__").addEventListener("click", closeEM);
+          let curOpts = genEmailOptions(lastSelectedAccount.name);
+          function renderEM(opts) {
+            const listEl = box.querySelector("#__em_list__");
+            listEl.innerHTML = "";
+            opts.forEach((o, idx) => {
+              const row = document.createElement("div");
+              row.style.cssText = "padding:8px 10px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;";
+              row.innerHTML = `
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:700;font-size:12px;color:#111;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="__em_val_${idx}__">${o.value}</div>
+                  <div style="font-size:10px;color:#999;">${o.label}</div>
+                </div>
+                <button data-idx="${idx}" class="__em_pick__" style="padding:5px 10px;background:#ea4335;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">✅</button>
+                <button data-idx="${idx}" class="__em_rand__" style="padding:5px 8px;background:#f0ad4e;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;flex-shrink:0;">🎲</button>
+              `;
+              listEl.appendChild(row);
+            });
+            listEl.querySelectorAll(".__em_pick__").forEach(b => {
+              b.addEventListener("click", async () => {
+                const idx = parseInt(b.dataset.idx);
+                closeEM();
+                btnGmail.textContent = "⌨️..."; btnGmail.disabled = true;
+                await typeIntoInput(getEmailInput(), curOpts[idx].value);
+                btnGmail.textContent = "✅ Xong"; btnGmail.style.background = "#2e7d32";
+                setTimeout(() => { btnGmail.innerHTML = "📧 Gmail"; btnGmail.style.background = "#ea4335"; btnGmail.disabled = false; }, 1500);
+              });
+            });
+            listEl.querySelectorAll(".__em_rand__").forEach(b => {
+              b.addEventListener("click", () => {
+                const idx = parseInt(b.dataset.idx);
+                const fresh = genEmailOptions(lastSelectedAccount.name);
+                curOpts[idx] = fresh[idx];
+                const valEl = listEl.querySelector(`#__em_val_${idx}__`);
+                if (valEl) valEl.textContent = curOpts[idx].value;
+              });
+            });
+          }
+          renderEM(curOpts);
+        });
+
+        // Nút 🎲 Random Gmail
+        const btnRandEM = document.createElement("button");
+        btnRandEM.id = "__mk_email_rand__";
+        btnRandEM.type = "button";
+        btnRandEM.innerHTML = "🎲";
+        Object.assign(btnRandEM.style, {
+          position:"absolute", right:"4px", top:"50%", transform:"translateY(-50%)",
+          background:"#f0ad4e", color:"#fff", border:"none", borderRadius:"6px",
+          padding:"6px 8px", cursor:"pointer", fontWeight:"700", fontSize:"13px",
+          zIndex:"9999", whiteSpace:"nowrap", touchAction:"manipulation"
+        });
+        btnRandEM.addEventListener("mousedown", e => e.preventDefault());
+        btnRandEM.addEventListener("click", async () => {
+          if (!lastSelectedAccount) { showToast("⚠️ Bấm Điền Tên trước!", "error"); return; }
+          const opts = genEmailOptions(lastSelectedAccount.name);
+          const pick = opts[Math.floor(Math.random() * opts.length)];
+          btnRandEM.disabled = true;
+          await typeIntoInput(getEmailInput(), pick.value);
+          showToast("📧 " + pick.value, "info");
+          btnRandEM.disabled = false;
+        });
+
+        w.appendChild(btnGmail);
+        w.appendChild(btnRandEM);
       }
     }
 
