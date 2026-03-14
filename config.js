@@ -1007,7 +1007,7 @@
       btnCity.id = "__mk_city_btn__";
       btnCity.type = "button";
       btnCity.innerHTML = "🏙️ Tỉnh/TP";
-      btnCity.style.cssText = "position:absolute;right:38px;top:50%;transform:translateY(-50%);background:#6f42c1;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;font-weight:700;font-size:11px;z-index:9999;white-space:nowrap;touch-action:manipulation;max-width:90px;";
+      btnCity.style.cssText = "position:absolute;right:46px;top:50%;transform:translateY(-50%);background:#6f42c1;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;font-weight:700;font-size:11px;z-index:9999;white-space:nowrap;touch-action:manipulation;max-width:90px;";
       btnCity.addEventListener("mousedown", e => e.preventDefault());
       btnCity.addEventListener("click", openCityPicker);
 
@@ -1016,7 +1016,7 @@
       btnRandCity.id = "__mk_city_rand__";
       btnRandCity.type = "button";
       btnRandCity.innerHTML = "🎲";
-      btnRandCity.style.cssText = "position:absolute;right:4px;top:50%;transform:translateY(-50%);background:#f0ad4e;color:#fff;border:none;border-radius:6px;padding:5px 7px;cursor:pointer;font-weight:700;font-size:13px;z-index:9999;white-space:nowrap;touch-action:manipulation;";
+      btnRandCity.style.cssText = "position:absolute;right:4px;top:50%;transform:translateY(-50%);background:#f0ad4e;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;font-size:13px;z-index:9999;white-space:nowrap;touch-action:manipulation;";
       btnRandCity.addEventListener("mousedown", e => e.preventDefault());
       btnRandCity.addEventListener("click", async () => {
         const pick = pickRand(PROVINCES_63);
