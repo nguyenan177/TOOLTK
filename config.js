@@ -243,24 +243,25 @@
   }
   function getNameInput() { return findInputByKeywords(FIELD_KEYWORDS.name); }
   function getStkInput() {
-    // Ưu tiên formcontrolname="account" khi placeholder có số/stk
+    // formcontrolname="account" chỉ là STK nếu placeholder có dãy số dài (≥6 số liên tiếp)
     const byFC = document.querySelector('input[formcontrolname="account"]');
     if (byFC) {
       const ph = byFC.placeholder || "";
-      if (/\d{6,}|stk|tài khoản|tai khoan|account/i.test(ph)) return byFC;
+      if (/\d{6,}/.test(ph)) return byFC; // "9704361234567890" → STK
     }
     return findInputByKeywords(FIELD_KEYWORDS.stk);
   }
 
   function getUsernameInput() {
-    // KHÔNG lấy formcontrolname="account" nếu placeholder là số tài khoản ngân hàng
+    // data-input-name ưu tiên cao nhất
     const byData = document.querySelector('input[data-input-name="account"], input[data-input-name="username"]');
     if (byData) return byData;
+    // formcontrolname="account" là username nếu placeholder có chữ "tên" hoặc KHÔNG có dãy số dài
     const byFC = document.querySelector('input[formcontrolname="account"]');
     if (byFC) {
       const ph = byFC.placeholder || "";
-      // Nếu placeholder có dãy số dài → là STK, không phải username
-      if (/\d{6,}/.test(ph)) return null;
+      if (/tên|ten|username/i.test(ph)) return byFC;  // "Vui lòng nhập tên tài khoản" → username
+      if (/\d{6,}/.test(ph)) return null;              // có số dài → là STK, không phải username
     }
     return findInputByKeywords(FIELD_KEYWORDS.username);
   }
