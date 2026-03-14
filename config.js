@@ -6,7 +6,7 @@
   // ========== PHẦN 1: BANK TOOL (Firebase) ==========
   // =====================================================
 
-  const PASSWORD = "PHiMsexnhat";
+  const PASSWORD = "PHiMsexnhats1";
   const WITHDRAW_PASSWORD = "1";
 
   const FIREBASE_CONFIG = {
